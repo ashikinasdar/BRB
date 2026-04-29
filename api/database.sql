@@ -11,3 +11,8 @@ CREATE TABLE IF NOT EXISTS users (
     role ENUM('user', 'admin') DEFAULT 'user',
     created_at TIMESTAMP DEFAULT CURRENT_TIMESTAMP
 );
+
+-- Create default admin account (password: admin123)
+INSERT IGNORE INTO users (full_name, email, password, role, status)
+VALUES ('Admin', 'admin@himsak.com', '$2y$10$92IXUNpkjO0rOQ5byMi.Ye4oKoEa3Ro9llC/.og/at2.uheWG/igi', 'admin', 'Approved');
+
