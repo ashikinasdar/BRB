@@ -111,44 +111,18 @@ class _ApplyFinancialAidScreenState extends State<ApplyFinancialAidScreen> {
 
       if (!mounted) return;
 
-      showDialog(
-        context: context,
-        barrierDismissible: false,
-        builder: (context) => AlertDialog(
-          shape: RoundedRectangleBorder(borderRadius: BorderRadius.circular(16)),
-          content: Column(
-            mainAxisSize: MainAxisSize.min,
-            children: [
-              const Icon(Icons.check_circle, color: Colors.green, size: 60),
-              const SizedBox(height: 16),
-              const Text(
-                'Application Submitted!',
-                style: TextStyle(fontSize: 20, fontWeight: FontWeight.bold),
-                textAlign: TextAlign.center,
-              ),
-              const SizedBox(height: 8),
-              const Text(
-                'Your financial aid application has been submitted successfully and is pending review.',
-                textAlign: TextAlign.center,
-                style: TextStyle(color: Colors.grey),
-              ),
-              const SizedBox(height: 24),
-              SizedBox(
-                width: double.infinity,
-                child: ElevatedButton(
-                  style: ElevatedButton.styleFrom(
-                    backgroundColor: const Color(0xFF8E1E3A),
-                    padding: const EdgeInsets.symmetric(vertical: 12),
-                  ),
-                  onPressed: () {
-                    Navigator.pop(context); // Close dialog
-                    Navigator.pop(context); // Go back to dashboard
-                  },
-                  child: const Text('Back to Dashboard'),
-                ),
-              ),
-            ],
-          ),
+      _formKey.currentState!.reset();
+      amountController.clear();
+      descController.clear();
+      setState(() {
+        fileBytes = null;
+        fileName = null;
+      });
+
+      ScaffoldMessenger.of(context).showSnackBar(
+        const SnackBar(
+          content: Text('Application submitted successfully'),
+          backgroundColor: Colors.green,
         ),
       );
 
@@ -212,7 +186,13 @@ class _ApplyFinancialAidScreenState extends State<ApplyFinancialAidScreen> {
                 .snapshots(),
             builder: (context, snapshot) {
               if (!snapshot.hasData || snapshot.data!.docs.isEmpty) {
-                return const SizedBox.shrink();
+                return const Padding(
+                  padding: EdgeInsets.fromLTRB(16, 24, 16, 8),
+                  child: Text(
+                    'Apply for Financial Aid',
+                    style: TextStyle(fontSize: 18, fontWeight: FontWeight.bold, color: Color(0xFF8E1E3A)),
+                  ),
+                );
               }
               
               final docs = snapshot.data!.docs.toList();
@@ -229,6 +209,15 @@ class _ApplyFinancialAidScreenState extends State<ApplyFinancialAidScreen> {
               final status = latestApp['status'] ?? 'Pending';
               final adminReason = latestApp['adminReason'] ?? '';
               
+              final dateObj = latestApp['createdAt'] as Timestamp?;
+              final dateStr = dateObj != null 
+                  ? "${dateObj.toDate().day}/${dateObj.toDate().month}/${dateObj.toDate().year}" 
+                  : "N/A";
+              final reason = latestApp['reasonType'] ?? 'N/A';
+              final amountStr = latestApp['amount']?.toString() ?? '0';
+              final desc = latestApp['description'] ?? 'N/A';
+              final hasFile = latestApp['documentBase64'] != null ? 'Document uploaded' : 'No document';
+
               Color statusColor = Colors.orange;
               IconData statusIcon = Icons.access_time;
               if (status == 'Approved') {
@@ -239,45 +228,62 @@ class _ApplyFinancialAidScreenState extends State<ApplyFinancialAidScreen> {
                 statusIcon = Icons.cancel;
               }
 
-              return Padding(
-                padding: const EdgeInsets.fromLTRB(16, 16, 16, 0),
-                child: Container(
-                  padding: const EdgeInsets.all(16),
-                  decoration: BoxDecoration(
-                    color: statusColor.withOpacity(0.1),
-                    border: Border.all(color: statusColor.withOpacity(0.5)),
-                    borderRadius: BorderRadius.circular(12),
+              return Column(
+                crossAxisAlignment: CrossAxisAlignment.start,
+                children: [
+                  const Padding(
+                    padding: EdgeInsets.fromLTRB(16, 24, 16, 8),
+                    child: Text(
+                      'Your Latest Application',
+                      style: TextStyle(fontSize: 18, fontWeight: FontWeight.bold, color: Color(0xFF8E1E3A)),
+                    ),
                   ),
-                  child: Row(
-                    children: [
-                      Icon(statusIcon, color: statusColor, size: 32),
-                      const SizedBox(width: 16),
-                      Expanded(
-                        child: Column(
-                          crossAxisAlignment: CrossAxisAlignment.start,
-                          children: [
-                            Text(
-                              'Application Status: $status',
-                              style: TextStyle(
-                                fontSize: 16,
-                                fontWeight: FontWeight.bold,
-                                color: statusColor,
+                  Card(
+                    margin: const EdgeInsets.symmetric(horizontal: 16),
+                    shape: RoundedRectangleBorder(borderRadius: BorderRadius.circular(12)),
+                    elevation: 3,
+                    child: Padding(
+                      padding: const EdgeInsets.all(16),
+                      child: Column(
+                        crossAxisAlignment: CrossAxisAlignment.start,
+                        children: [
+                          _buildDetailRow('Student Name', widget.userName),
+                          _buildDetailRow('Reason Type', reason),
+                          _buildDetailRow('Requested', 'RM $amountStr'),
+                          _buildDetailRow('Description', desc),
+                          _buildDetailRow('Uploaded File', hasFile),
+                          _buildDetailRow('Submitted On', dateStr),
+                          const Divider(height: 24),
+                          Row(
+                            children: [
+                              Icon(statusIcon, color: statusColor, size: 24),
+                              const SizedBox(width: 8),
+                              Text(
+                                'Status: $status',
+                                style: TextStyle(fontSize: 16, fontWeight: FontWeight.bold, color: statusColor),
+                              ),
+                            ],
+                          ),
+                          if (status == 'Rejected' && adminReason.toString().isNotEmpty)
+                            Padding(
+                              padding: const EdgeInsets.only(top: 8),
+                              child: Text(
+                                'Admin Reason: $adminReason',
+                                style: const TextStyle(color: Colors.red, fontWeight: FontWeight.w500),
                               ),
                             ),
-                            if (status == 'Rejected' && adminReason.toString().isNotEmpty)
-                              Padding(
-                                padding: const EdgeInsets.only(top: 4),
-                                child: Text(
-                                  'Reason: $adminReason',
-                                  style: const TextStyle(fontSize: 12, color: Colors.black87),
-                                ),
-                              ),
-                          ],
-                        ),
+                        ],
                       ),
-                    ],
+                    ),
                   ),
-                ),
+                  const Padding(
+                    padding: EdgeInsets.fromLTRB(16, 32, 16, 8),
+                    child: Text(
+                      'Apply for Financial Aid',
+                      style: TextStyle(fontSize: 18, fontWeight: FontWeight.bold, color: Color(0xFF8E1E3A)),
+                    ),
+                  ),
+                ],
               );
             },
           ),
@@ -431,6 +437,19 @@ class _ApplyFinancialAidScreenState extends State<ApplyFinancialAidScreen> {
               ),
             ),
           ),
+        ],
+      ),
+    );
+  }
+
+  Widget _buildDetailRow(String label, String value) {
+    return Padding(
+      padding: const EdgeInsets.only(bottom: 8),
+      child: Row(
+        crossAxisAlignment: CrossAxisAlignment.start,
+        children: [
+          SizedBox(width: 130, child: Text(label, style: const TextStyle(fontWeight: FontWeight.w600, color: Colors.grey))),
+          Expanded(child: Text(value, style: const TextStyle(fontWeight: FontWeight.w500))),
         ],
       ),
     );
