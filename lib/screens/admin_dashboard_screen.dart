@@ -5,8 +5,49 @@ import '../providers/auth_provider.dart';
 import 'login_screen.dart';
 import '../screens/admin/financial_aid_admin_screen.dart';
 
-class AdminDashboardScreen extends StatelessWidget {
+class AdminDashboardScreen extends StatefulWidget {
   const AdminDashboardScreen({super.key});
+
+  @override
+  State<AdminDashboardScreen> createState() => _AdminDashboardScreenState();
+}
+
+class _AdminDashboardScreenState extends State<AdminDashboardScreen> {
+  int _selectedIndex = 0;
+
+  final List<Widget> _pages = [
+    const _AdminUsersBody(),
+    const FinancialAidAdminScreen(),
+  ];
+
+  @override
+  Widget build(BuildContext context) {
+    return Scaffold(
+      body: _pages[_selectedIndex],
+      bottomNavigationBar: NavigationBar(
+        selectedIndex: _selectedIndex,
+        onDestinationSelected: (index) {
+          setState(() {
+            _selectedIndex = index;
+          });
+        },
+        destinations: const [
+          NavigationDestination(
+            icon: Icon(Icons.people),
+            label: 'Users',
+          ),
+          NavigationDestination(
+            icon: Icon(Icons.monetization_on),
+            label: 'Financial Aid',
+          ),
+        ],
+      ),
+    );
+  }
+}
+
+class _AdminUsersBody extends StatelessWidget {
+  const _AdminUsersBody();
 
   @override
   Widget build(BuildContext context) {

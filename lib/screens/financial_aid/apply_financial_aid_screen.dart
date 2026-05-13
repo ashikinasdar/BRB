@@ -1,8 +1,10 @@
 import 'dart:io';
+import 'dart:typed_data';
+import 'dart:convert';
 import 'package:flutter/material.dart';
 import 'package:cloud_firestore/cloud_firestore.dart';
 import 'package:file_picker/file_picker.dart';
-import 'package:firebase_storage/firebase_storage.dart';
+import 'package:file_picker/file_picker.dart';
 
 class ApplyFinancialAidScreen extends StatefulWidget {
   final String userId;
@@ -25,28 +27,48 @@ class _ApplyFinancialAidScreenState extends State<ApplyFinancialAidScreen> {
   final amountController = TextEditingController();
   final descController = TextEditingController();
 
-  File? file;
+  Uint8List? fileBytes;
   String? fileName;
+  bool isLoading = false;
 
   Future<void> pickFile() async {
-    final result = await FilePicker.platform.pickFiles();
+    try {
+      final result = await FilePicker.platform.pickFiles(
+        withData: true,
+        type: FileType.custom,
+        allowedExtensions: ['jpg', 'png', 'jpeg'], // Limit to images for Base64 viewing
+      );
 
-    if (result != null) {
-      setState(() {
-        file = File(result.files.single.path!);
-        fileName = result.files.single.name;
-      });
+      if (result != null) {
+        Uint8List? bytes = result.files.single.bytes;
+        if (bytes == null && result.files.single.path != null) {
+          bytes = File(result.files.single.path!).readAsBytesSync();
+        }
+        
+        if (bytes != null && bytes.length > 800000) {
+          if (mounted) {
+            ScaffoldMessenger.of(context).showSnackBar(
+              const SnackBar(content: Text('File is too large! Please select an image under 800KB.')),
+            );
+          }
+          return;
+        }
+
+        setState(() {
+          fileBytes = bytes;
+          fileName = result.files.single.name;
+        });
+      }
+    } catch (e) {
+      if (mounted) {
+        ScaffoldMessenger.of(context).showSnackBar(
+          SnackBar(content: Text('Error picking file: $e')),
+        );
+      }
     }
   }
 
-  Future<String> uploadFile(File file) async {
-    final ref = FirebaseStorage.instance
-        .ref()
-        .child('financial_aid/${DateTime.now().millisecondsSinceEpoch}.pdf');
-
-    await ref.putFile(file);
-    return await ref.getDownloadURL();
-  }
+    // Removed uploadFile method as we are using base64 now
 
   Future<void> submit() async {
     final amount = double.tryParse(amountController.text);
@@ -57,16 +79,18 @@ class _ApplyFinancialAidScreenState extends State<ApplyFinancialAidScreen> {
       return;
     }
 
-    try {
-      if (!_formKey.currentState!.validate()) return;
-      if (file == null) {
-        ScaffoldMessenger.of(context).showSnackBar(
-          const SnackBar(content: Text('Please upload a document')),
-        );
-        return;
-      }
+    if (!_formKey.currentState!.validate()) return;
+    if (fileBytes == null || fileName == null) {
+      ScaffoldMessenger.of(context).showSnackBar(
+        const SnackBar(content: Text('Please upload a document')),
+      );
+      return;
+    }
 
-      final docUrl = await uploadFile(file!);
+    setState(() => isLoading = true);
+
+    try {
+      final base64Doc = base64Encode(fileBytes!);
 
       await FirebaseFirestore.instance.collection('financial_aid').add({
         'userId': widget.userId,
@@ -74,25 +98,66 @@ class _ApplyFinancialAidScreenState extends State<ApplyFinancialAidScreen> {
         'reasonType': reasonType,
         'amount': amount,
         'description': descController.text,
-        'documentUrl': docUrl,
+        'documentBase64': base64Doc,
+        'documentName': fileName,
         'status': 'Pending',
         'adminReason': '',
         'displayOnDashboard': false,
         'createdAt': FieldValue.serverTimestamp(),
-      });
+      }).timeout(
+        const Duration(seconds: 10),
+        onTimeout: () => throw Exception('Firestore save timed out. Check your connection or Firebase rules.'),
+      );
 
       if (!mounted) return;
 
-      ScaffoldMessenger.of(context).showSnackBar(
-        const SnackBar(content: Text('Application submitted')),
+      showDialog(
+        context: context,
+        barrierDismissible: false,
+        builder: (context) => AlertDialog(
+          shape: RoundedRectangleBorder(borderRadius: BorderRadius.circular(16)),
+          content: Column(
+            mainAxisSize: MainAxisSize.min,
+            children: [
+              const Icon(Icons.check_circle, color: Colors.green, size: 60),
+              const SizedBox(height: 16),
+              const Text(
+                'Application Submitted!',
+                style: TextStyle(fontSize: 20, fontWeight: FontWeight.bold),
+                textAlign: TextAlign.center,
+              ),
+              const SizedBox(height: 8),
+              const Text(
+                'Your financial aid application has been submitted successfully and is pending review.',
+                textAlign: TextAlign.center,
+                style: TextStyle(color: Colors.grey),
+              ),
+              const SizedBox(height: 24),
+              SizedBox(
+                width: double.infinity,
+                child: ElevatedButton(
+                  style: ElevatedButton.styleFrom(
+                    backgroundColor: const Color(0xFF8E1E3A),
+                    padding: const EdgeInsets.symmetric(vertical: 12),
+                  ),
+                  onPressed: () {
+                    Navigator.pop(context); // Close dialog
+                    Navigator.pop(context); // Go back to dashboard
+                  },
+                  child: const Text('Back to Dashboard'),
+                ),
+              ),
+            ],
+          ),
+        ),
       );
-
-      Navigator.pop(context);
 
     } catch (e) {
       ScaffoldMessenger.of(context).showSnackBar(
         SnackBar(content: Text('Error: $e')),
       );
+    } finally {
+      if (mounted) setState(() => isLoading = false);
     }
   }
 
@@ -137,6 +202,84 @@ class _ApplyFinancialAidScreenState extends State<ApplyFinancialAidScreen> {
                 ),
               ],
             ),
+          ),
+
+          // STATUS SECTION
+          StreamBuilder<QuerySnapshot>(
+            stream: FirebaseFirestore.instance
+                .collection('financial_aid')
+                .where('userId', isEqualTo: widget.userId)
+                .snapshots(),
+            builder: (context, snapshot) {
+              if (!snapshot.hasData || snapshot.data!.docs.isEmpty) {
+                return const SizedBox.shrink();
+              }
+              
+              final docs = snapshot.data!.docs.toList();
+              docs.sort((a, b) {
+                final tA = (a.data() as Map<String, dynamic>)['createdAt'] as Timestamp?;
+                final tB = (b.data() as Map<String, dynamic>)['createdAt'] as Timestamp?;
+                if (tA == null && tB == null) return 0;
+                if (tA == null) return -1;
+                if (tB == null) return 1;
+                return tB.compareTo(tA);
+              });
+              
+              final latestApp = docs.first.data() as Map<String, dynamic>;
+              final status = latestApp['status'] ?? 'Pending';
+              final adminReason = latestApp['adminReason'] ?? '';
+              
+              Color statusColor = Colors.orange;
+              IconData statusIcon = Icons.access_time;
+              if (status == 'Approved') {
+                statusColor = Colors.green;
+                statusIcon = Icons.check_circle;
+              } else if (status == 'Rejected') {
+                statusColor = Colors.red;
+                statusIcon = Icons.cancel;
+              }
+
+              return Padding(
+                padding: const EdgeInsets.fromLTRB(16, 16, 16, 0),
+                child: Container(
+                  padding: const EdgeInsets.all(16),
+                  decoration: BoxDecoration(
+                    color: statusColor.withOpacity(0.1),
+                    border: Border.all(color: statusColor.withOpacity(0.5)),
+                    borderRadius: BorderRadius.circular(12),
+                  ),
+                  child: Row(
+                    children: [
+                      Icon(statusIcon, color: statusColor, size: 32),
+                      const SizedBox(width: 16),
+                      Expanded(
+                        child: Column(
+                          crossAxisAlignment: CrossAxisAlignment.start,
+                          children: [
+                            Text(
+                              'Application Status: $status',
+                              style: TextStyle(
+                                fontSize: 16,
+                                fontWeight: FontWeight.bold,
+                                color: statusColor,
+                              ),
+                            ),
+                            if (status == 'Rejected' && adminReason.toString().isNotEmpty)
+                              Padding(
+                                padding: const EdgeInsets.only(top: 4),
+                                child: Text(
+                                  'Reason: $adminReason',
+                                  style: const TextStyle(fontSize: 12, color: Colors.black87),
+                                ),
+                              ),
+                          ],
+                        ),
+                      ),
+                    ],
+                  ),
+                ),
+              );
+            },
           ),
 
           // FORM CARD
@@ -253,7 +396,7 @@ class _ApplyFinancialAidScreenState extends State<ApplyFinancialAidScreen> {
                               textAlign: TextAlign.center,
                             ),
                             const Text(
-                              "PDF, JPG, or PNG (max 5MB)",
+                              "JPG or PNG (max 800KB)",
                               style: TextStyle(fontSize: 12, color: Colors.grey),
                             ),
                           ],
@@ -270,8 +413,17 @@ class _ApplyFinancialAidScreenState extends State<ApplyFinancialAidScreen> {
                           backgroundColor: const Color(0xFF8E1E3A),
                           padding: const EdgeInsets.symmetric(vertical: 14),
                         ),
-                        onPressed: submit,
-                        child: const Text('Submit Application'),
+                        onPressed: isLoading ? null : submit,
+                        child: isLoading
+                            ? const SizedBox(
+                                height: 20,
+                                width: 20,
+                                child: CircularProgressIndicator(
+                                  color: Colors.white,
+                                  strokeWidth: 2,
+                                ),
+                              )
+                            : const Text('Submit Application'),
                       ),
                     ),
                   ],

@@ -1,5 +1,6 @@
 import 'package:flutter/material.dart';
 import 'package:cloud_firestore/cloud_firestore.dart';
+import 'dart:convert';
 
 class FinancialAidAdminScreen extends StatelessWidget {
   const FinancialAidAdminScreen({super.key});
@@ -56,17 +57,49 @@ class FinancialAidAdminScreen extends StatelessWidget {
               return Card(
                 margin: const EdgeInsets.all(10),
                 child: ListTile(
-                  title: Text(data['userName']),
+                  title: Text(data['userName'] ?? 'Unknown User'),
                   subtitle: Column(
                     crossAxisAlignment: CrossAxisAlignment.start,
                     children: [
-                      Text('Reason: ${data['reasonType']}'),
-                      Text('Amount: RM ${data['amount']}'),
-                      Text('Status: ${data['status']}'),
+                      Text('Reason: ${data['reasonType'] ?? 'N/A'}'),
+                      Text('Amount: RM ${data['amount'] ?? 0}'),
+                      Text('Status: ${data['status'] ?? 'Pending'}'),
 
                       if (data['status'] == 'Rejected')
-                        Text('Admin Reason: ${data['adminReason']}',
+                        Text('Admin Reason: ${data['adminReason'] ?? ''}',
                             style: const TextStyle(color: Colors.red)),
+                      if (data['documentBase64'] != null)
+                        TextButton.icon(
+                          onPressed: () {
+                            showDialog(
+                              context: context,
+                              builder: (context) => Dialog(
+                                child: Stack(
+                                  children: [
+                                    Image.memory(
+                                      base64Decode(data['documentBase64']),
+                                      fit: BoxFit.contain,
+                                    ),
+                                    Positioned(
+                                      top: 8,
+                                      right: 8,
+                                      child: IconButton(
+                                        icon: const Icon(Icons.close, color: Colors.black),
+                                        onPressed: () => Navigator.pop(context),
+                                      ),
+                                    ),
+                                  ],
+                                ),
+                              ),
+                            );
+                          },
+                          icon: const Icon(Icons.image, size: 16),
+                          label: const Text('View Document'),
+                          style: TextButton.styleFrom(
+                            padding: EdgeInsets.zero,
+                            alignment: Alignment.centerLeft,
+                          ),
+                        ),
                     ],
                   ),
 
@@ -85,7 +118,7 @@ class FinancialAidAdminScreen extends StatelessWidget {
                       ),
 
                       IconButton(
-                        icon: const Icon(Icons.close, color: Colors.red),
+                        icon: const Icon(Icons.close, color: Color.fromARGB(60, 244, 67, 54)),
                         onPressed: () async {
 
                           await showDialog(
