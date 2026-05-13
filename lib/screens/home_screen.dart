@@ -2,6 +2,8 @@ import 'package:flutter/material.dart';
 import 'package:provider/provider.dart';
 import '../providers/auth_provider.dart';
 import 'login_screen.dart';
+import '../screens/financial_aid/apply_financial_aid_screen.dart';
+import 'package:firebase_auth/firebase_auth.dart' hide AuthProvider;
 
 class HomeScreen extends StatefulWidget {
   const HomeScreen({super.key});
@@ -13,9 +15,13 @@ class HomeScreen extends StatefulWidget {
 class _HomeScreenState extends State<HomeScreen> {
   int _currentIndex = 0;
 
+
+
   @override
   Widget build(BuildContext context) {
     final primaryColor = Theme.of(context).colorScheme.primary;
+
+
 
     return Scaffold(
       body: _getBody(context, primaryColor),
@@ -45,7 +51,17 @@ class _HomeScreenState extends State<HomeScreen> {
       case 1:
         return const Center(child: Text("Discounts Coming Soon", style: TextStyle(color: Colors.grey)));
       case 2:
-        return const Center(child: Text("Aid Coming Soon", style: TextStyle(color: Colors.grey)));
+        final user = FirebaseAuth.instance.currentUser;
+
+
+        if (user == null) {
+          return const Center(child: Text("Not logged in"));
+        }
+
+        return ApplyFinancialAidScreen(
+          userId: user.uid,
+          userName: user.displayName ?? "Student",
+        );
       case 3:
         return _buildProfile(context, primaryColor);
       default:
@@ -117,4 +133,6 @@ class _HomeScreenState extends State<HomeScreen> {
       ),
     );
   }
+
+
 }
