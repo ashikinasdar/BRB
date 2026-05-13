@@ -1,0 +1,28 @@
+{
+  "name": "brb",
+  "version": "1.0.0",
+  "description": "This mobile app helps Kelantanese students access financial aid, announcements, and discounts in one place. It simplifies support, shares updates, and offers savings through a trusted, verified system.",
+  "main": "migrate.js",
+  "directories": {
+    "lib": "lib",
+    "test": "test"
+  },
+  "scripts": {
+    "test": "echo \"Error: no test specified\" && exit 1"
+  },
+  "repository": {
+    "type": "git",
+    "url": "git+https://github.com/ashikinasdar/BRB.git"
+  },
+  "keywords": [],
+  "author": "",
+  "license": "ISC",
+  "type": "commonjs",
+  "bugs": {
+    "url": "https://github.com/ashikinasdar/BRB/issues"
+  },
+  "homepage": "https://github.com/ashikinasdar/BRB#readme",
+  "dependencies": {
+    "firebase-admin": "^13.9.0"
+  }
+}

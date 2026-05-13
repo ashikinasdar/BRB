@@ -4,6 +4,7 @@ import 'package:image_picker/image_picker.dart';
 import 'dart:convert';
 import '../providers/auth_provider.dart';
 import 'login_screen.dart';
+import 'package:firebase_storage/firebase_storage.dart';  // 🔥 For IC upload
 
 class RegisterScreen extends StatefulWidget {
   const RegisterScreen({super.key});
@@ -41,15 +42,14 @@ class _RegisterScreenState extends State<RegisterScreen> {
       }
 
       setState(() { _isLoading = true; });
-      final bytes = await _icImage!.readAsBytes();
-      final base64Image = "data:image/png;base64," + base64Encode(bytes);
 
       final authProvider = Provider.of<AuthProvider>(context, listen: false);
       final errorMsg = await authProvider.register(
         _fullNameController.text.trim(),
         _emailController.text.trim(),
         _passwordController.text,
-        base64Image,
+        'user',
+        _icImage!.path
       );
       setState(() { _isLoading = false; });
 
@@ -189,7 +189,7 @@ class _RegisterScreenState extends State<RegisterScreen> {
                     padding: const EdgeInsets.symmetric(vertical: 16),
                     shape: RoundedRectangleBorder(borderRadius: BorderRadius.circular(12)),
                   ),
-                  child: _isLoading 
+                  child: _isLoading
                       ? const CircularProgressIndicator(color: Colors.white)
                       : const Text('Register', style: TextStyle(fontSize: 16)),
                 ),

@@ -1,5 +1,7 @@
 import 'package:flutter/material.dart';
 import 'package:provider/provider.dart';
+import 'package:cloud_firestore/cloud_firestore.dart';
+
 import '../providers/auth_provider.dart';
 import 'register_screen.dart';
 import 'home_screen.dart';
@@ -20,25 +22,56 @@ class _LoginScreenState extends State<LoginScreen> {
   void _login() async {
     if (_formKey.currentState!.validate()) {
       setState(() { _isLoading = true; });
+
       final authProvider = Provider.of<AuthProvider>(context, listen: false);
+
       final errorMsg = await authProvider.login(
         _emailController.text.trim(),
         _passwordController.text,
       );
+
       setState(() { _isLoading = false; });
 
       if (errorMsg == null && mounted) {
-        if (authProvider.currentUser?.role == 'admin') {
-          Navigator.pushReplacementNamed(context, '/admin');
-        } else {
-          Navigator.pushReplacement(
-            context,
-            MaterialPageRoute(builder: (_) => const HomeScreen()),
-          );
+        final user = authProvider.currentUser;
+
+        if (user != null) {
+          final doc = await FirebaseFirestore.instance
+              .collection('users')
+              .doc(user.uid)
+              .get();
+
+          if (doc.exists) {
+            final data = doc.data()!;
+            final role = data['role'] ?? 'user';
+            final status = data['status'] ?? 'Pending Verification';
+
+            if (role == 'admin') {
+              Navigator.pushReplacementNamed(context, '/admin');
+              return;
+            }
+
+            if (status != 'Approved') {
+              ScaffoldMessenger.of(context).showSnackBar(
+                const SnackBar(content: Text('Account not approved yet')),
+              );
+              await authProvider.logout();
+              return;
+            }
+
+            Navigator.pushReplacement(
+              context,
+              MaterialPageRoute(builder: (_) => const HomeScreen()),
+            );
+          } else {
+            ScaffoldMessenger.of(context).showSnackBar(
+              const SnackBar(content: Text('❌ User profile not found')),
+            );
+          }
         }
       } else if (mounted) {
         ScaffoldMessenger.of(context).showSnackBar(
-          SnackBar(content: Text(errorMsg ?? 'Login failed.')),
+          SnackBar(content: Text(errorMsg ?? 'Login failed')),
         );
       }
     }
