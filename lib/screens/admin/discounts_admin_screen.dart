@@ -1,6 +1,9 @@
+import 'dart:convert';
+import 'dart:typed_data';
 import 'package:flutter/material.dart';
 import 'package:cloud_firestore/cloud_firestore.dart';
 import 'package:url_launcher/url_launcher.dart';
+import 'package:file_picker/file_picker.dart';
 
 class DiscountsAdminScreen extends StatefulWidget {
   const DiscountsAdminScreen({super.key});
@@ -19,8 +22,13 @@ class _DiscountsAdminScreenState extends State<DiscountsAdminScreen> {
   final TextEditingController _locationController = TextEditingController();
   final TextEditingController _hoursController = TextEditingController();
   final TextEditingController _termsController = TextEditingController();
-  final TextEditingController _imageUrlController = TextEditingController();
+  
   String _selectedCategory = 'Food';
+
+  // Image picking states
+  Uint8List? _selectedFileBytes;
+  String? _selectedFileName;
+  String? _existingImageUrl;
 
   @override
   void dispose() {
@@ -30,7 +38,6 @@ class _DiscountsAdminScreenState extends State<DiscountsAdminScreen> {
     _locationController.dispose();
     _hoursController.dispose();
     _termsController.dispose();
-    _imageUrlController.dispose();
     super.dispose();
   }
 
@@ -41,8 +48,190 @@ class _DiscountsAdminScreenState extends State<DiscountsAdminScreen> {
     _locationController.clear();
     _hoursController.clear();
     _termsController.clear();
-    _imageUrlController.clear();
     _selectedCategory = 'Food';
+    _selectedFileBytes = null;
+    _selectedFileName = null;
+    _existingImageUrl = null;
+  }
+
+  Future<void> _pickImage(StateSetter setDialogState) async {
+    try {
+      final result = await FilePicker.platform.pickFiles(
+        withData: true,
+        type: FileType.custom,
+        allowedExtensions: ['jpg', 'png', 'jpeg'],
+      );
+
+      if (result != null) {
+        final file = result.files.single;
+        Uint8List? bytes = file.bytes;
+
+        if (bytes != null && bytes.length > 800000) {
+          if (mounted) {
+            ScaffoldMessenger.of(context).showSnackBar(
+              const SnackBar(content: Text('File is too large! Maximum size allowed is 800KB.')),
+            );
+          }
+          return;
+        }
+
+        setDialogState(() {
+          _selectedFileBytes = bytes;
+          _selectedFileName = file.name;
+        });
+      }
+    } catch (e) {
+      if (mounted) {
+        ScaffoldMessenger.of(context).showSnackBar(
+          SnackBar(content: Text('Error picking file: $e')),
+        );
+      }
+    }
+  }
+
+  Widget _buildImagePickerWidget(StateSetter setDialogState) {
+    final primaryColor = Theme.of(context).colorScheme.primary;
+
+    return Container(
+      width: double.infinity,
+      margin: const EdgeInsets.symmetric(vertical: 12),
+      padding: const EdgeInsets.all(12),
+      decoration: BoxDecoration(
+        border: Border.all(color: Colors.grey.shade300),
+        borderRadius: BorderRadius.circular(12),
+        color: Colors.grey.shade50,
+      ),
+      child: Column(
+        crossAxisAlignment: CrossAxisAlignment.start,
+        children: [
+          const Text(
+            'Poster Image (Max 800KB)*',
+            style: TextStyle(fontWeight: FontWeight.bold, fontSize: 13, color: Colors.black87),
+          ),
+          const SizedBox(height: 8),
+          if (_selectedFileBytes != null) ...[
+            Row(
+              children: [
+                Container(
+                  height: 80,
+                  width: 80,
+                  decoration: BoxDecoration(
+                    borderRadius: BorderRadius.circular(8),
+                    border: Border.all(color: Colors.grey.shade300),
+                  ),
+                  clipBehavior: Clip.antiAlias,
+                  child: Image.memory(
+                    _selectedFileBytes!,
+                    fit: BoxFit.cover,
+                  ),
+                ),
+                const SizedBox(width: 12),
+                Expanded(
+                  child: Column(
+                    crossAxisAlignment: CrossAxisAlignment.start,
+                    children: [
+                      Text(
+                        _selectedFileName ?? 'Selected File',
+                        maxLines: 1,
+                        overflow: TextOverflow.ellipsis,
+                        style: const TextStyle(fontWeight: FontWeight.w600, fontSize: 12),
+                      ),
+                      const SizedBox(height: 4),
+                      const Text('New poster selected', style: TextStyle(color: Colors.green, fontSize: 11)),
+                    ],
+                  ),
+                ),
+                IconButton(
+                  icon: const Icon(Icons.delete_outline, color: Colors.red),
+                  onPressed: () {
+                    setDialogState(() {
+                      _selectedFileBytes = null;
+                      _selectedFileName = null;
+                    });
+                  },
+                ),
+              ],
+            ),
+          ] else if (_existingImageUrl != null && _existingImageUrl!.isNotEmpty) ...[
+            Row(
+              children: [
+                Container(
+                  height: 80,
+                  width: 80,
+                  decoration: BoxDecoration(
+                    borderRadius: BorderRadius.circular(8),
+                    border: Border.all(color: Colors.grey.shade300),
+                  ),
+                  clipBehavior: Clip.antiAlias,
+                  child: _existingImageUrl!.startsWith('http')
+                      ? Image.network(
+                          _existingImageUrl!,
+                          fit: BoxFit.cover,
+                          errorBuilder: (context, error, stackTrace) => const Icon(Icons.broken_image),
+                        )
+                      : Image.memory(
+                          base64Decode(_existingImageUrl!),
+                          fit: BoxFit.cover,
+                          errorBuilder: (context, error, stackTrace) => const Icon(Icons.broken_image),
+                        ),
+                ),
+                const SizedBox(width: 12),
+                const Expanded(
+                  child: Column(
+                    crossAxisAlignment: CrossAxisAlignment.start,
+                    children: [
+                      Text(
+                        'Current Poster',
+                        style: TextStyle(fontWeight: FontWeight.w600, fontSize: 12),
+                      ),
+                      const SizedBox(height: 4),
+                      Text('Existing image will be kept', style: TextStyle(color: Colors.grey, fontSize: 11)),
+                    ],
+                  ),
+                ),
+                ElevatedButton(
+                  style: ElevatedButton.styleFrom(
+                    backgroundColor: primaryColor.withOpacity(0.08),
+                    foregroundColor: primaryColor,
+                    elevation: 0,
+                    padding: const EdgeInsets.symmetric(horizontal: 12, vertical: 8),
+                    shape: RoundedRectangleBorder(borderRadius: BorderRadius.circular(8)),
+                  ),
+                  onPressed: () => _pickImage(setDialogState),
+                  child: const Text('Change', style: TextStyle(fontSize: 12, fontWeight: FontWeight.bold)),
+                ),
+                const SizedBox(width: 8),
+                IconButton(
+                  icon: const Icon(Icons.delete_outline, color: Colors.red),
+                  onPressed: () {
+                    setDialogState(() {
+                      _existingImageUrl = null;
+                    });
+                  },
+                ),
+              ],
+            ),
+          ] else ...[
+            SizedBox(
+              width: double.infinity,
+              height: 80,
+              child: OutlinedButton.icon(
+                style: OutlinedButton.styleFrom(
+                  shape: RoundedRectangleBorder(borderRadius: BorderRadius.circular(12)),
+                  side: BorderSide(color: primaryColor.withOpacity(0.5)),
+                ),
+                onPressed: () => _pickImage(setDialogState),
+                icon: Icon(Icons.add_photo_alternate_outlined, color: primaryColor),
+                label: Text(
+                  'Browse Poster File',
+                  style: TextStyle(color: primaryColor, fontWeight: FontWeight.bold),
+                ),
+              ),
+            ),
+          ],
+        ],
+      ),
+    );
   }
 
   void _showFormDialog({String? docId, Map<String, dynamic>? initialData}) {
@@ -52,8 +241,10 @@ class _DiscountsAdminScreenState extends State<DiscountsAdminScreen> {
       _aboutController.text = initialData['about'] ?? '';
       _locationController.text = initialData['location'] ?? '';
       _hoursController.text = initialData['operatingHours'] ?? '';
-      _imageUrlController.text = initialData['imageUrl'] ?? '';
       _selectedCategory = initialData['category'] ?? 'Food';
+      _existingImageUrl = initialData['imageUrl'] ?? '';
+      _selectedFileBytes = null;
+      _selectedFileName = null;
       
       final terms = initialData['terms'] as List<dynamic>?;
       if (terms != null) {
@@ -123,13 +314,10 @@ class _DiscountsAdminScreenState extends State<DiscountsAdminScreen> {
                         decoration: const InputDecoration(labelText: 'Operating Hours (e.g. 10AM - 6PM)'),
                       ),
                       const SizedBox(height: 12),
-                      TextField(
-                        controller: _imageUrlController,
-                        decoration: const InputDecoration(
-                          labelText: 'Image Web URL',
-                          hintText: 'https://images.unsplash.com/...',
-                        ),
-                      ),
+                      
+                      // Custom image picker widget instead of URL text field
+                      _buildImagePickerWidget(setDialogState),
+                      
                       const SizedBox(height: 12),
                       TextField(
                         controller: _termsController,
@@ -163,12 +351,18 @@ class _DiscountsAdminScreenState extends State<DiscountsAdminScreen> {
                       return;
                     }
 
+                    if (_selectedFileBytes == null && (_existingImageUrl == null || _existingImageUrl!.isEmpty)) {
+                      ScaffoldMessenger.of(context).showSnackBar(
+                        const SnackBar(content: Text('Please select a poster image')),
+                      );
+                      return;
+                    }
+
                     final name = _nameController.text.trim();
                     final offer = _offerController.text.trim();
                     final about = _aboutController.text.trim();
                     final location = _locationController.text.trim();
                     final hours = _hoursController.text.trim();
-                    final imgUrl = _imageUrlController.text.trim();
                     final category = _selectedCategory;
                     
                     final terms = _termsController.text
@@ -177,13 +371,21 @@ class _DiscountsAdminScreenState extends State<DiscountsAdminScreen> {
                         .where((t) => t.isNotEmpty)
                         .toList();
 
+                    // Convert new image to base64 if picked
+                    String posterData = '';
+                    if (_selectedFileBytes != null) {
+                      posterData = base64Encode(_selectedFileBytes!);
+                    } else {
+                      posterData = _existingImageUrl ?? '';
+                    }
+
                     final Map<String, dynamic> data = {
                       'name': name,
                       'discountOffer': offer,
                       'about': about,
                       'location': location,
                       'operatingHours': hours,
-                      'imageUrl': imgUrl,
+                      'imageUrl': posterData,
                       'category': category,
                       'terms': terms,
                     };

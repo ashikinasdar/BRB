@@ -1,3 +1,4 @@
+import 'dart:convert';
 import 'package:flutter/material.dart';
 import 'package:cloud_firestore/cloud_firestore.dart';
 
@@ -329,15 +330,23 @@ class _DiscountsListScreenState extends State<DiscountsListScreen> {
                                         child: Stack(
                                           fit: StackFit.expand,
                                           children: [
-                                            imageUrl.isNotEmpty
-                                                ? Image.network(
-                                                    imageUrl,
-                                                    fit: BoxFit.cover,
-                                                    errorBuilder: (context, error, stackTrace) {
-                                                      return _buildImageErrorWidget();
-                                                    },
-                                                  )
-                                                : _buildImageErrorWidget(),
+                                             imageUrl.isNotEmpty
+                                                 ? (imageUrl.startsWith('http')
+                                                     ? Image.network(
+                                                         imageUrl,
+                                                         fit: BoxFit.cover,
+                                                         errorBuilder: (context, error, stackTrace) {
+                                                           return _buildImageErrorWidget();
+                                                         },
+                                                       )
+                                                     : Image.memory(
+                                                         base64Decode(imageUrl),
+                                                         fit: BoxFit.cover,
+                                                         errorBuilder: (context, error, stackTrace) {
+                                                           return _buildImageErrorWidget();
+                                                         },
+                                                       ))
+                                                 : _buildImageErrorWidget(),
                                             Positioned(
                                               top: 12,
                                               right: 12,
@@ -546,11 +555,17 @@ class _DiscountDetailScreenState extends State<DiscountDetailScreen> {
                 iconTheme: const IconThemeData(color: Colors.white),
                 flexibleSpace: FlexibleSpaceBar(
                   background: imageUrl.isNotEmpty
-                      ? Image.network(
-                          imageUrl,
-                          fit: BoxFit.cover,
-                          errorBuilder: (context, error, stackTrace) => Container(color: Colors.grey.shade300),
-                        )
+                      ? (imageUrl.startsWith('http')
+                          ? Image.network(
+                              imageUrl,
+                              fit: BoxFit.cover,
+                              errorBuilder: (context, error, stackTrace) => Container(color: Colors.grey.shade300),
+                            )
+                          : Image.memory(
+                              base64Decode(imageUrl),
+                              fit: BoxFit.cover,
+                              errorBuilder: (context, error, stackTrace) => Container(color: Colors.grey.shade300),
+                            ))
                       : Container(color: Colors.grey.shade300),
                 ),
               ),
