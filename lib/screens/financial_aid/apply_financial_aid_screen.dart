@@ -4,7 +4,6 @@ import 'dart:convert';
 import 'package:flutter/material.dart';
 import 'package:cloud_firestore/cloud_firestore.dart';
 import 'package:file_picker/file_picker.dart';
-import 'package:file_picker/file_picker.dart';
 
 class ApplyFinancialAidScreen extends StatefulWidget {
   final String userId;
@@ -21,6 +20,348 @@ class ApplyFinancialAidScreen extends StatefulWidget {
 }
 
 class _ApplyFinancialAidScreenState extends State<ApplyFinancialAidScreen> {
+  void _navigateToForm(BuildContext context) {
+    Navigator.push(
+      context,
+      MaterialPageRoute(
+        builder: (_) => FinancialAidFormScreen(
+          userId: widget.userId,
+          userName: widget.userName,
+        ),
+      ),
+    );
+  }
+
+  void _viewDocument(BuildContext context, String base64Doc) {
+    showDialog(
+      context: context,
+      builder: (context) => Dialog(
+        shape: RoundedRectangleBorder(borderRadius: BorderRadius.circular(16)),
+        child: ClipRRect(
+          borderRadius: BorderRadius.circular(16),
+          child: Stack(
+            alignment: Alignment.center,
+            children: [
+              Padding(
+                padding: const EdgeInsets.all(16.0),
+                child: Image.memory(
+                  base64Decode(base64Doc),
+                  fit: BoxFit.contain,
+                ),
+              ),
+              Positioned(
+                top: 8,
+                right: 8,
+                child: CircleAvatar(
+                  backgroundColor: Colors.white,
+                  child: IconButton(
+                    icon: const Icon(Icons.close, color: Colors.black),
+                    onPressed: () => Navigator.pop(context),
+                  ),
+                ),
+              ),
+            ],
+          ),
+        ),
+      ),
+    );
+  }
+
+  Widget _buildStatusBadge(String status) {
+    Color bgColor;
+    Color textColor;
+    IconData icon;
+
+    switch (status) {
+      case 'Approved':
+        bgColor = Colors.green.shade50;
+        textColor = Colors.green.shade700;
+        icon = Icons.check_circle_outline;
+        break;
+      case 'Rejected':
+        bgColor = Colors.red.shade50;
+        textColor = Colors.red.shade700;
+        icon = Icons.highlight_off;
+        break;
+      case 'Pending':
+      default:
+        bgColor = Colors.orange.shade50;
+        textColor = Colors.orange.shade800;
+        icon = Icons.hourglass_empty;
+        break;
+    }
+
+    return Container(
+      padding: const EdgeInsets.symmetric(horizontal: 10, vertical: 4),
+      decoration: BoxDecoration(
+        color: bgColor,
+        borderRadius: BorderRadius.circular(12),
+        border: Border.all(color: textColor.withOpacity(0.3)),
+      ),
+      child: Row(
+        mainAxisSize: MainAxisSize.min,
+        children: [
+          Icon(icon, size: 14, color: textColor),
+          const SizedBox(width: 4),
+          Text(
+            status,
+            style: TextStyle(
+              color: textColor,
+              fontWeight: FontWeight.bold,
+              fontSize: 12,
+            ),
+          ),
+        ],
+      ),
+    );
+  }
+
+  @override
+  Widget build(BuildContext context) {
+    final primaryColor = Theme.of(context).colorScheme.primary;
+
+    return Scaffold(
+      backgroundColor: const Color(0xFFF4F6FA),
+      appBar: AppBar(
+        title: const Text('Financial Aid History'),
+        backgroundColor: primaryColor,
+        foregroundColor: Colors.white,
+        elevation: 0,
+      ),
+      body: StreamBuilder<QuerySnapshot>(
+        stream: FirebaseFirestore.instance
+            .collection('financial_aid')
+            .where('userId', isEqualTo: widget.userId)
+            .snapshots(),
+        builder: (context, snapshot) {
+          if (snapshot.connectionState == ConnectionState.waiting) {
+            return const Center(child: CircularProgressIndicator());
+          }
+
+          if (!snapshot.hasData || snapshot.data!.docs.isEmpty) {
+            return _buildEmptyState(context);
+          }
+
+          final docs = snapshot.data!.docs.toList();
+          docs.sort((a, b) {
+            final tA = (a.data() as Map<String, dynamic>)['createdAt'] as Timestamp?;
+            final tB = (b.data() as Map<String, dynamic>)['createdAt'] as Timestamp?;
+            if (tA == null && tB == null) return 0;
+            if (tA == null) return 1;
+            if (tB == null) return -1;
+            return tB.compareTo(tA);
+          });
+
+          return ListView.builder(
+            padding: const EdgeInsets.fromLTRB(16, 16, 16, 80), // extra bottom padding for FAB
+            itemCount: docs.length,
+            itemBuilder: (context, index) {
+              final appData = docs[index].data() as Map<String, dynamic>;
+              final reason = appData['reasonType'] ?? 'N/A';
+              final amount = (appData['amount'] as num?)?.toDouble() ?? 0.0;
+              final desc = appData['description'] ?? '';
+              final status = appData['status'] ?? 'Pending';
+              final adminReason = appData['adminReason'] ?? '';
+              final dateObj = appData['createdAt'] as Timestamp?;
+              final dateStr = dateObj != null
+                  ? "${dateObj.toDate().day}/${dateObj.toDate().month}/${dateObj.toDate().year}"
+                  : "N/A";
+              final documentBase64 = appData['documentBase64'] as String?;
+              final hasDocument = documentBase64 != null && documentBase64.isNotEmpty;
+
+              return Card(
+                margin: const EdgeInsets.only(bottom: 16),
+                shape: RoundedRectangleBorder(borderRadius: BorderRadius.circular(16)),
+                elevation: 2,
+                child: Padding(
+                  padding: const EdgeInsets.all(16),
+                  child: Column(
+                    crossAxisAlignment: CrossAxisAlignment.start,
+                    children: [
+                      Row(
+                        mainAxisAlignment: MainAxisAlignment.spaceBetween,
+                        children: [
+                          Expanded(
+                            child: Text(
+                              reason,
+                              style: const TextStyle(
+                                fontSize: 16,
+                                fontWeight: FontWeight.bold,
+                                color: Colors.black87,
+                              ),
+                            ),
+                          ),
+                          _buildStatusBadge(status),
+                        ],
+                      ),
+                      const SizedBox(height: 8),
+                      Text(
+                        'RM ${amount.toStringAsFixed(2)}',
+                        style: TextStyle(
+                          fontSize: 20,
+                          fontWeight: FontWeight.bold,
+                          color: primaryColor,
+                        ),
+                      ),
+                      const SizedBox(height: 8),
+                      if (desc.isNotEmpty) ...[
+                        Text(
+                          desc,
+                          style: const TextStyle(fontSize: 14, color: Colors.black54),
+                        ),
+                        const SizedBox(height: 8),
+                      ],
+                      Row(
+                        mainAxisAlignment: MainAxisAlignment.spaceBetween,
+                        children: [
+                          Text(
+                            'Submitted on: $dateStr',
+                            style: const TextStyle(fontSize: 12, color: Colors.grey),
+                          ),
+                          if (hasDocument)
+                            TextButton.icon(
+                              style: TextButton.styleFrom(
+                                padding: EdgeInsets.zero,
+                                minimumSize: Size.zero,
+                                tapTargetSize: MaterialTapTargetSize.shrinkWrap,
+                              ),
+                              onPressed: () => _viewDocument(context, documentBase64),
+                              icon: const Icon(Icons.image_outlined, size: 16),
+                              label: const Text('View Doc', style: TextStyle(fontSize: 12)),
+                            ),
+                        ],
+                      ),
+                      if (status == 'Rejected' && adminReason.toString().isNotEmpty) ...[
+                        const SizedBox(height: 12),
+                        Container(
+                          width: double.infinity,
+                          padding: const EdgeInsets.all(12),
+                          decoration: BoxDecoration(
+                            color: Colors.red.shade50,
+                            borderRadius: BorderRadius.circular(8),
+                            border: Border.all(color: Colors.red.shade200),
+                          ),
+                          child: Column(
+                            crossAxisAlignment: CrossAxisAlignment.start,
+                            children: [
+                              Row(
+                                children: [
+                                  Icon(Icons.warning_amber_rounded, color: Colors.red.shade700, size: 16),
+                                  const SizedBox(width: 4),
+                                  Text(
+                                    'Feedback from Admin:',
+                                    style: TextStyle(
+                                      color: Colors.red.shade700,
+                                      fontWeight: FontWeight.bold,
+                                      fontSize: 12,
+                                    ),
+                                  ),
+                                ],
+                              ),
+                              const SizedBox(height: 4),
+                              Text(
+                                adminReason,
+                                style: TextStyle(color: Colors.red.shade900, fontSize: 13),
+                              ),
+                            ],
+                          ),
+                        ),
+                      ],
+                    ],
+                  ),
+                ),
+              );
+            },
+          );
+        },
+      ),
+      floatingActionButton: FloatingActionButton.extended(
+        backgroundColor: primaryColor,
+        onPressed: () => _navigateToForm(context),
+        icon: const Icon(Icons.add, color: Colors.white),
+        label: const Text('New Application', style: TextStyle(color: Colors.white, fontWeight: FontWeight.bold)),
+      ),
+    );
+  }
+
+  Widget _buildEmptyState(BuildContext context) {
+    final primaryColor = Theme.of(context).colorScheme.primary;
+
+    return Center(
+      child: SingleChildScrollView(
+        padding: const EdgeInsets.all(24),
+        child: Column(
+          mainAxisAlignment: MainAxisAlignment.center,
+          children: [
+            Container(
+              padding: const EdgeInsets.all(24),
+              decoration: BoxDecoration(
+                color: primaryColor.withOpacity(0.1),
+                shape: BoxShape.circle,
+              ),
+              child: Icon(
+                Icons.monetization_on_outlined,
+                size: 80,
+                color: primaryColor,
+              ),
+            ),
+            const SizedBox(height: 24),
+            const Text(
+              'No Aid Applications Yet',
+              style: TextStyle(
+                fontSize: 20,
+                fontWeight: FontWeight.bold,
+                color: Colors.black87,
+              ),
+            ),
+            const SizedBox(height: 8),
+            const Text(
+              'Facing a family, medical, or educational emergency? Submit an application for financial assistance here.',
+              textAlign: TextAlign.center,
+              style: TextStyle(
+                fontSize: 14,
+                color: Colors.black54,
+                height: 1.4,
+              ),
+            ),
+            const SizedBox(height: 32),
+            ElevatedButton.icon(
+              style: ElevatedButton.styleFrom(
+                backgroundColor: primaryColor,
+                padding: const EdgeInsets.symmetric(horizontal: 24, vertical: 14),
+                shape: RoundedRectangleBorder(
+                  borderRadius: BorderRadius.circular(12),
+                ),
+              ),
+              onPressed: () => _navigateToForm(context),
+              icon: const Icon(Icons.add, color: Colors.white),
+              label: const Text(
+                'Apply for Financial Aid',
+                style: TextStyle(fontSize: 15, fontWeight: FontWeight.bold, color: Colors.white),
+              ),
+            ),
+          ],
+        ),
+      ),
+    );
+  }
+}
+
+class FinancialAidFormScreen extends StatefulWidget {
+  final String userId;
+  final String userName;
+
+  const FinancialAidFormScreen({
+    super.key,
+    required this.userId,
+    required this.userName,
+  });
+
+  @override
+  State<FinancialAidFormScreen> createState() => _FinancialAidFormScreenState();
+}
+
+class _FinancialAidFormScreenState extends State<FinancialAidFormScreen> {
   final _formKey = GlobalKey<FormState>();
 
   String reasonType = 'Medical emergency';
@@ -36,7 +377,7 @@ class _ApplyFinancialAidScreenState extends State<ApplyFinancialAidScreen> {
       final result = await FilePicker.platform.pickFiles(
         withData: true,
         type: FileType.custom,
-        allowedExtensions: ['jpg', 'png', 'jpeg'], // Limit to images for Base64 viewing
+        allowedExtensions: ['jpg', 'png', 'jpeg'],
       );
 
       if (result != null) {
@@ -44,7 +385,7 @@ class _ApplyFinancialAidScreenState extends State<ApplyFinancialAidScreen> {
         if (bytes == null && result.files.single.path != null) {
           bytes = File(result.files.single.path!).readAsBytesSync();
         }
-        
+
         if (bytes != null && bytes.length > 800000) {
           if (mounted) {
             ScaffoldMessenger.of(context).showSnackBar(
@@ -67,8 +408,6 @@ class _ApplyFinancialAidScreenState extends State<ApplyFinancialAidScreen> {
       }
     }
   }
-
-    // Removed uploadFile method as we are using base64 now
 
   Future<void> submit() async {
     final amount = double.tryParse(amountController.text);
@@ -111,14 +450,6 @@ class _ApplyFinancialAidScreenState extends State<ApplyFinancialAidScreen> {
 
       if (!mounted) return;
 
-      _formKey.currentState!.reset();
-      amountController.clear();
-      descController.clear();
-      setState(() {
-        fileBytes = null;
-        fileName = null;
-      });
-
       ScaffoldMessenger.of(context).showSnackBar(
         const SnackBar(
           content: Text('Application submitted successfully'),
@@ -126,6 +457,7 @@ class _ApplyFinancialAidScreenState extends State<ApplyFinancialAidScreen> {
         ),
       );
 
+      Navigator.pop(context);
     } catch (e) {
       ScaffoldMessenger.of(context).showSnackBar(
         SnackBar(content: Text('Error: $e')),
@@ -136,24 +468,33 @@ class _ApplyFinancialAidScreenState extends State<ApplyFinancialAidScreen> {
   }
 
   @override
+  void dispose() {
+    amountController.dispose();
+    descController.dispose();
+    super.dispose();
+  }
+
+  @override
   Widget build(BuildContext context) {
+    final primaryColor = Theme.of(context).colorScheme.primary;
+
     return Scaffold(
       backgroundColor: const Color(0xFFF4F6FA),
       appBar: AppBar(
-        title: const Text('Apply Financial Aid'),
-        backgroundColor: const Color(0xFF8E1E3A),
+        title: const Text('Apply for Financial Aid'),
+        backgroundColor: primaryColor,
+        foregroundColor: Colors.white,
         elevation: 0,
       ),
       body: ListView(
         children: [
-
           // HEADER SECTION
           Container(
             width: double.infinity,
             padding: const EdgeInsets.symmetric(vertical: 24, horizontal: 16),
-            decoration: const BoxDecoration(
+            decoration: BoxDecoration(
               gradient: LinearGradient(
-                colors: [Color(0xFF8E1E3A), Color(0xFFB03052)],
+                colors: [primaryColor, primaryColor.withOpacity(0.8)],
                 begin: Alignment.topLeft,
                 end: Alignment.bottomRight,
               ),
@@ -162,7 +503,7 @@ class _ApplyFinancialAidScreenState extends State<ApplyFinancialAidScreen> {
               crossAxisAlignment: CrossAxisAlignment.start,
               children: [
                 Text(
-                  "Financial Aid",
+                  "Financial Aid Request",
                   style: TextStyle(
                     color: Colors.white,
                     fontSize: 22,
@@ -171,121 +512,11 @@ class _ApplyFinancialAidScreenState extends State<ApplyFinancialAidScreen> {
                 ),
                 SizedBox(height: 4),
                 Text(
-                  "Submit your application",
+                  "Submit your application details below",
                   style: TextStyle(color: Colors.white70),
                 ),
               ],
             ),
-          ),
-
-          // STATUS SECTION
-          StreamBuilder<QuerySnapshot>(
-            stream: FirebaseFirestore.instance
-                .collection('financial_aid')
-                .where('userId', isEqualTo: widget.userId)
-                .snapshots(),
-            builder: (context, snapshot) {
-              if (!snapshot.hasData || snapshot.data!.docs.isEmpty) {
-                return const Padding(
-                  padding: EdgeInsets.fromLTRB(16, 24, 16, 8),
-                  child: Text(
-                    'Apply for Financial Aid',
-                    style: TextStyle(fontSize: 18, fontWeight: FontWeight.bold, color: Color(0xFF8E1E3A)),
-                  ),
-                );
-              }
-              
-              final docs = snapshot.data!.docs.toList();
-              docs.sort((a, b) {
-                final tA = (a.data() as Map<String, dynamic>)['createdAt'] as Timestamp?;
-                final tB = (b.data() as Map<String, dynamic>)['createdAt'] as Timestamp?;
-                if (tA == null && tB == null) return 0;
-                if (tA == null) return -1;
-                if (tB == null) return 1;
-                return tB.compareTo(tA);
-              });
-              
-              final latestApp = docs.first.data() as Map<String, dynamic>;
-              final status = latestApp['status'] ?? 'Pending';
-              final adminReason = latestApp['adminReason'] ?? '';
-              
-              final dateObj = latestApp['createdAt'] as Timestamp?;
-              final dateStr = dateObj != null 
-                  ? "${dateObj.toDate().day}/${dateObj.toDate().month}/${dateObj.toDate().year}" 
-                  : "N/A";
-              final reason = latestApp['reasonType'] ?? 'N/A';
-              final amountStr = latestApp['amount']?.toString() ?? '0';
-              final desc = latestApp['description'] ?? 'N/A';
-              final hasFile = latestApp['documentBase64'] != null ? 'Document uploaded' : 'No document';
-
-              Color statusColor = Colors.orange;
-              IconData statusIcon = Icons.access_time;
-              if (status == 'Approved') {
-                statusColor = Colors.green;
-                statusIcon = Icons.check_circle;
-              } else if (status == 'Rejected') {
-                statusColor = Colors.red;
-                statusIcon = Icons.cancel;
-              }
-
-              return Column(
-                crossAxisAlignment: CrossAxisAlignment.start,
-                children: [
-                  const Padding(
-                    padding: EdgeInsets.fromLTRB(16, 24, 16, 8),
-                    child: Text(
-                      'Your Latest Application',
-                      style: TextStyle(fontSize: 18, fontWeight: FontWeight.bold, color: Color(0xFF8E1E3A)),
-                    ),
-                  ),
-                  Card(
-                    margin: const EdgeInsets.symmetric(horizontal: 16),
-                    shape: RoundedRectangleBorder(borderRadius: BorderRadius.circular(12)),
-                    elevation: 3,
-                    child: Padding(
-                      padding: const EdgeInsets.all(16),
-                      child: Column(
-                        crossAxisAlignment: CrossAxisAlignment.start,
-                        children: [
-                          _buildDetailRow('Student Name', widget.userName),
-                          _buildDetailRow('Reason Type', reason),
-                          _buildDetailRow('Requested', 'RM $amountStr'),
-                          _buildDetailRow('Description', desc),
-                          _buildDetailRow('Uploaded File', hasFile),
-                          _buildDetailRow('Submitted On', dateStr),
-                          const Divider(height: 24),
-                          Row(
-                            children: [
-                              Icon(statusIcon, color: statusColor, size: 24),
-                              const SizedBox(width: 8),
-                              Text(
-                                'Status: $status',
-                                style: TextStyle(fontSize: 16, fontWeight: FontWeight.bold, color: statusColor),
-                              ),
-                            ],
-                          ),
-                          if (status == 'Rejected' && adminReason.toString().isNotEmpty)
-                            Padding(
-                              padding: const EdgeInsets.only(top: 8),
-                              child: Text(
-                                'Admin Reason: $adminReason',
-                                style: const TextStyle(color: Colors.red, fontWeight: FontWeight.w500),
-                              ),
-                            ),
-                        ],
-                      ),
-                    ),
-                  ),
-                  const Padding(
-                    padding: EdgeInsets.fromLTRB(16, 32, 16, 8),
-                    child: Text(
-                      'Apply for Financial Aid',
-                      style: TextStyle(fontSize: 18, fontWeight: FontWeight.bold, color: Color(0xFF8E1E3A)),
-                    ),
-                  ),
-                ],
-              );
-            },
           ),
 
           // FORM CARD
@@ -308,7 +539,6 @@ class _ApplyFinancialAidScreenState extends State<ApplyFinancialAidScreen> {
                 key: _formKey,
                 child: Column(
                   children: [
-
                     // INFO BOX
                     Container(
                       padding: const EdgeInsets.all(12),
@@ -332,7 +562,7 @@ class _ApplyFinancialAidScreenState extends State<ApplyFinancialAidScreen> {
 
                     const SizedBox(height: 16),
 
-                    DropdownButtonFormField(
+                    DropdownButtonFormField<String>(
                       value: reasonType,
                       items: const [
                         DropdownMenuItem(
@@ -367,7 +597,7 @@ class _ApplyFinancialAidScreenState extends State<ApplyFinancialAidScreen> {
                         hintText: 'e.g., 500',
                       ),
                       validator: (value) =>
-                      value!.isEmpty ? 'Enter amount' : null,
+                          value == null || value.isEmpty ? 'Enter amount' : null,
                     ),
 
                     const SizedBox(height: 10),
@@ -390,16 +620,17 @@ class _ApplyFinancialAidScreenState extends State<ApplyFinancialAidScreen> {
                         width: double.infinity,
                         padding: const EdgeInsets.all(16),
                         decoration: BoxDecoration(
-                          border: Border.all(color: Colors.grey),
+                          border: Border.all(color: Colors.grey.shade400),
                           borderRadius: BorderRadius.circular(12),
                         ),
                         child: Column(
                           children: [
-                            const Icon(Icons.upload_file, size: 30),
+                            Icon(Icons.upload_file, size: 30, color: primaryColor),
                             const SizedBox(height: 8),
                             Text(
                               fileName ?? 'Click to upload documents',
                               textAlign: TextAlign.center,
+                              style: TextStyle(fontWeight: fileName != null ? FontWeight.bold : FontWeight.normal),
                             ),
                             const Text(
                               "JPG or PNG (max 800KB)",
@@ -416,8 +647,11 @@ class _ApplyFinancialAidScreenState extends State<ApplyFinancialAidScreen> {
                       width: double.infinity,
                       child: ElevatedButton(
                         style: ElevatedButton.styleFrom(
-                          backgroundColor: const Color(0xFF8E1E3A),
+                          backgroundColor: primaryColor,
                           padding: const EdgeInsets.symmetric(vertical: 14),
+                          shape: RoundedRectangleBorder(
+                            borderRadius: BorderRadius.circular(12),
+                          ),
                         ),
                         onPressed: isLoading ? null : submit,
                         child: isLoading
@@ -429,7 +663,10 @@ class _ApplyFinancialAidScreenState extends State<ApplyFinancialAidScreen> {
                                   strokeWidth: 2,
                                 ),
                               )
-                            : const Text('Submit Application'),
+                            : const Text(
+                                'Submit Application',
+                                style: TextStyle(color: Colors.white, fontSize: 16, fontWeight: FontWeight.bold),
+                              ),
                       ),
                     ),
                   ],
@@ -437,19 +674,6 @@ class _ApplyFinancialAidScreenState extends State<ApplyFinancialAidScreen> {
               ),
             ),
           ),
-        ],
-      ),
-    );
-  }
-
-  Widget _buildDetailRow(String label, String value) {
-    return Padding(
-      padding: const EdgeInsets.only(bottom: 8),
-      child: Row(
-        crossAxisAlignment: CrossAxisAlignment.start,
-        children: [
-          SizedBox(width: 130, child: Text(label, style: const TextStyle(fontWeight: FontWeight.w600, color: Colors.grey))),
-          Expanded(child: Text(value, style: const TextStyle(fontWeight: FontWeight.w500))),
         ],
       ),
     );
