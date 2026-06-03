@@ -9,6 +9,7 @@ import '../screens/financial_aid/apply_financial_aid_screen.dart';
 import 'announcements/announcements_list_screen.dart';
 import 'announcements/announcement_detail_screen.dart';
 import 'discounts/discounts_list_screen.dart';
+import 'profile_screen.dart';
 
 class HomeScreen extends StatefulWidget {
   const HomeScreen({super.key});
@@ -90,7 +91,7 @@ class _HomeScreenState extends State<HomeScreen> {
         if (user == null) return const Center(child: Text("Not logged in"));
         return ApplyFinancialAidScreen(userId: user.uid, userName: user.displayName ?? "Student");
       case 3:
-        return _buildProfile(context, primaryColor);
+        return const ProfileScreen();
       default:
         return const Center(child: Text("Coming Soon"));
     }
@@ -356,28 +357,4 @@ class _HomeScreenState extends State<HomeScreen> {
     );
   }
 
-  Widget _buildProfile(BuildContext context, Color primaryColor) {
-    return Center(
-      child: Column(
-        mainAxisAlignment: MainAxisAlignment.center,
-        children: [
-          const Icon(Icons.person_outline, size: 80, color: Colors.grey),
-          const SizedBox(height: 16),
-          const Text("Profile Section", style: TextStyle(fontSize: 16, color: Colors.grey)),
-          const SizedBox(height: 32),
-          ElevatedButton.icon(
-            onPressed: () {
-              context.read<AuthProvider>().logout();
-              Navigator.pushReplacement(context, MaterialPageRoute(builder: (_) => const LoginScreen()));
-            },
-            icon: const Icon(Icons.logout),
-            label: const Text("Log Out"),
-            style: ElevatedButton.styleFrom(
-              padding: const EdgeInsets.symmetric(horizontal: 24, vertical: 12),
-            ),
-          )
-        ],
-      ),
-    );
-  }
 }
