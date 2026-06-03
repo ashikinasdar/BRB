@@ -5,7 +5,10 @@ import 'login_screen.dart';
 import '../screens/financial_aid/apply_financial_aid_screen.dart';
 import 'package:firebase_auth/firebase_auth.dart' hide AuthProvider;
 import 'announcements/announcements_list_screen.dart';
+import 'announcements/announcement_detail_screen.dart';
 import 'discounts/discounts_list_screen.dart';
+import 'package:cloud_firestore/cloud_firestore.dart';
+import 'dart:convert';
 
 class HomeScreen extends StatefulWidget {
   const HomeScreen({super.key});
@@ -112,9 +115,95 @@ class _HomeScreenState extends State<HomeScreen> {
             ],
           ),
         ),
-        const Expanded(
-          child: Center(
-            child: Text("Dashboard Content Coming Soon", style: TextStyle(fontSize: 16, color: Colors.grey)),
+        Expanded(
+          child: StreamBuilder<QuerySnapshot>(
+            stream: FirebaseFirestore.instance
+                .collection('announcements')
+                .orderBy('createdAt', descending: true)
+                .snapshots(),
+            builder: (context, snapshot) {
+              if (snapshot.connectionState == ConnectionState.waiting) {
+                return const Center(child: CircularProgressIndicator());
+              }
+
+              final docs = snapshot.data?.docs ?? [];
+              if (docs.isEmpty) {
+                return const Center(
+                  child: Text("No announcements yet", style: TextStyle(color: Colors.grey)),
+                );
+              }
+
+              return ListView.builder(
+                padding: const EdgeInsets.symmetric(horizontal: 16, vertical: 12),
+                itemCount: docs.length,
+                itemBuilder: (context, index) {
+                  final data = docs[index].data() as Map<String, dynamic>;
+                  final id = docs[index].id;
+                  final title = data['title'] ?? '(no title)';
+                  final body = data['body'] ?? '';
+                  final createdAt = (data['createdAt'] as Timestamp?)?.toDate();
+                  final imageUrl = data['imageUrl'];
+
+                  return Card(
+                    margin: const EdgeInsets.only(bottom: 12),
+                    shape: RoundedRectangleBorder(borderRadius: BorderRadius.circular(16)),
+                    elevation: 1,
+                    clipBehavior: Clip.antiAlias,
+                    child: InkWell(
+                      onTap: () {
+                        Navigator.push(
+                          context,
+                          MaterialPageRoute(
+                            builder: (_) => AnnouncementDetailScreen(announcementId: id),
+                          ),
+                        );
+                      },
+                      child: Column(
+                        crossAxisAlignment: CrossAxisAlignment.start,
+                        children: [
+                          if (imageUrl != null && imageUrl.isNotEmpty)
+                            SizedBox(
+                              height: 140,
+                              width: double.infinity,
+                              child: imageUrl.startsWith('http')
+                                  ? Image.network(imageUrl, fit: BoxFit.cover)
+                                  : Image.memory(base64Decode(imageUrl), fit: BoxFit.cover),
+                            ),
+                          Padding(
+                            padding: const EdgeInsets.all(16),
+                            child: Column(
+                              crossAxisAlignment: CrossAxisAlignment.start,
+                              children: [
+                                Text(
+                                  title,
+                                  style: const TextStyle(fontWeight: FontWeight.bold, fontSize: 16, color: Colors.black87),
+                                  maxLines: 1,
+                                  overflow: TextOverflow.ellipsis,
+                                ),
+                                const SizedBox(height: 6),
+                                Text(
+                                  body,
+                                  style: const TextStyle(fontSize: 13, color: Colors.black54),
+                                  maxLines: 2,
+                                  overflow: TextOverflow.ellipsis,
+                                ),
+                                if (createdAt != null) ...[
+                                  const SizedBox(height: 12),
+                                  Text(
+                                    '${createdAt.day}/${createdAt.month}/${createdAt.year}',
+                                    style: const TextStyle(fontSize: 11, color: Colors.grey, fontWeight: FontWeight.w600),
+                                  ),
+                                ]
+                              ],
+                            ),
+                          ),
+                        ],
+                      ),
+                    ),
+                  );
+                },
+              );
+            },
           ),
         ),
       ],

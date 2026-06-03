@@ -1,3 +1,4 @@
+import 'dart:convert';
 import 'package:flutter/material.dart';
 import 'package:cloud_firestore/cloud_firestore.dart';
 
@@ -35,7 +36,13 @@ class AnnouncementDetailScreen extends StatelessWidget {
               crossAxisAlignment: CrossAxisAlignment.start,
               children: [
                 if (imageUrl != null) ...[
-                  SizedBox(height: 200, width: double.infinity, child: Image.network(imageUrl, fit: BoxFit.cover)),
+                  SizedBox(
+                    height: 200, 
+                    width: double.infinity, 
+                    child: imageUrl.startsWith('http')
+                        ? Image.network(imageUrl, fit: BoxFit.cover)
+                        : Image.memory(base64Decode(imageUrl), fit: BoxFit.cover)
+                  ),
                   const SizedBox(height: 12),
                 ],
                 Text(title, style: Theme.of(context).textTheme.headlineSmall),

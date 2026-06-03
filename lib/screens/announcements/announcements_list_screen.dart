@@ -1,3 +1,4 @@
+import 'dart:convert';
 import 'package:flutter/material.dart';
 import 'package:cloud_firestore/cloud_firestore.dart';
 import 'announcement_detail_screen.dart';
@@ -39,7 +40,15 @@ class AnnouncementsListScreen extends StatelessWidget {
 
               return Card(
                 child: ListTile(
-                  leading: data['imageUrl'] != null ? SizedBox(width: 64, height: 64, child: Image.network(data['imageUrl'], fit: BoxFit.cover)) : null,
+                  leading: data['imageUrl'] != null 
+                    ? SizedBox(
+                        width: 64, 
+                        height: 64, 
+                        child: data['imageUrl'].startsWith('http')
+                            ? Image.network(data['imageUrl'], fit: BoxFit.cover)
+                            : Image.memory(base64Decode(data['imageUrl']), fit: BoxFit.cover)
+                      ) 
+                    : null,
                   title: Text(title, maxLines: 1, overflow: TextOverflow.ellipsis),
                   subtitle: Text(
                     body,

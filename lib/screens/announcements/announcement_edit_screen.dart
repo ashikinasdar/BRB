@@ -1,9 +1,8 @@
+import 'dart:convert';
 import 'package:flutter/material.dart';
 import 'package:cloud_firestore/cloud_firestore.dart';
 import 'package:firebase_auth/firebase_auth.dart';
 import 'package:file_picker/file_picker.dart';
-import 'package:firebase_storage/firebase_storage.dart';
-import 'dart:io' as io;
 
 class AnnouncementEditScreen extends StatefulWidget {
   final String? announcementId; // null => create
@@ -57,24 +56,16 @@ class _AnnouncementEditScreenState extends State<AnnouncementEditScreen> {
       'createdAt': FieldValue.serverTimestamp(),
     };
 
-    // If a new file was picked, upload it
-    if (_pickedFile != null) {
-      try {
-        final path = 'announcements/${DateTime.now().millisecondsSinceEpoch}_${_pickedFile!.name}';
-        final ref = FirebaseStorage.instance.ref().child(path);
-
-        if (_pickedFile!.bytes != null) {
-          await ref.putData(_pickedFile!.bytes!);
-        } else if (_pickedFile!.path != null) {
-          final file = io.File(_pickedFile!.path!);
-          await ref.putFile(file);
+    // If a new file was picked, encode it
+    if (_pickedFile != null && _pickedFile!.bytes != null) {
+      if (_pickedFile!.bytes!.length > 800000) {
+        if (mounted) {
+          ScaffoldMessenger.of(context).showSnackBar(const SnackBar(content: Text('Image must be under 800KB')));
         }
-
-        final url = await ref.getDownloadURL();
-        data['imageUrl'] = url;
-      } catch (e) {
-        // ignore upload error for now
+        setState(() => _saving = false);
+        return;
       }
+      data['imageUrl'] = base64Encode(_pickedFile!.bytes!);
     } else if (_existingImageUrl != null) {
       data['imageUrl'] = _existingImageUrl;
     }
@@ -88,7 +79,7 @@ class _AnnouncementEditScreenState extends State<AnnouncementEditScreen> {
 
       if (mounted) Navigator.pop(context, true);
     } catch (e) {
-      ScaffoldMessenger.of(context).showSnackBar(SnackBar(content: Text('Error: $e')));
+      if (mounted) ScaffoldMessenger.of(context).showSnackBar(SnackBar(content: Text('Error: $e')));
     } finally {
       if (mounted) setState(() => _saving = false);
     }
@@ -120,9 +111,11 @@ class _AnnouncementEditScreenState extends State<AnnouncementEditScreen> {
                   child: _pickedFile != null
                       ? (_pickedFile!.bytes != null
                           ? Image.memory(_pickedFile!.bytes!, fit: BoxFit.cover)
-                          : (_pickedFile!.path != null ? Image.file(io.File(_pickedFile!.path!), fit: BoxFit.cover) : const SizedBox()))
+                          : const Center(child: Text('Error loading picked image')))
                       : (_existingImageUrl != null
-                          ? Image.network(_existingImageUrl!, fit: BoxFit.cover)
+                          ? (_existingImageUrl!.startsWith('http')
+                              ? Image.network(_existingImageUrl!, fit: BoxFit.cover)
+                              : Image.memory(base64Decode(_existingImageUrl!), fit: BoxFit.cover))
                           : const Center(child: Text('Tap to add image'))),
                 ),
               ),
