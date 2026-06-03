@@ -36,7 +36,7 @@ class HimsakApp extends StatelessWidget {
 
   @override
   Widget build(BuildContext context) {
-    const primaryColor = Color(0xFF6B5ECE); // Indigo from reference
+    const primaryColor = Color(0xFFD32F2F); // Modern vibrant red
     const bgColor = Color(0xFFF8F9FA); // Ultra-light cool gray
 
     return MaterialApp(
@@ -64,7 +64,7 @@ class HimsakApp extends StatelessWidget {
             fontWeight: FontWeight.w600,
           ),
         ),
-        cardTheme: CardTheme(
+        cardTheme: CardThemeData(
           color: Colors.white,
           elevation: 4,
           shadowColor: Colors.black.withOpacity(0.06),
