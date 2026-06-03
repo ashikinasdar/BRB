@@ -44,12 +44,16 @@ class _RegisterScreenState extends State<RegisterScreen> {
       setState(() { _isLoading = true; });
 
       final authProvider = Provider.of<AuthProvider>(context, listen: false);
+      
+      final bytes = await _icImage!.readAsBytes();
+      final base64String = base64Encode(bytes);
+
       final errorMsg = await authProvider.register(
         _fullNameController.text.trim(),
         _emailController.text.trim(),
         _passwordController.text,
         'user',
-        _icImage!.path
+        base64String
       );
       setState(() { _isLoading = false; });
 

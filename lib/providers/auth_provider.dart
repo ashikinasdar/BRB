@@ -29,7 +29,7 @@ class AuthProvider extends ChangeNotifier {
       String email,
       String password,
       String role,
-      String icPath,
+      String icBase64,
       ) async {
     try {
       UserCredential userCredential =
@@ -40,19 +40,12 @@ class AuthProvider extends ChangeNotifier {
 
       String uid = userCredential.user!.uid;
 
-      /*final ref =
-      FirebaseStorage.instance.ref().child('ic_images/$uid.png');
-
-      await ref.putFile(File(icPath));
-      String imageUrl = await ref.getDownloadURL();*/
-      String imageUrl = '';
-
       await _db.collection('users').doc(uid).set({
         'fullName': fullName,
         'email': email,
         'status': 'Pending Verification',
         'role': role,
-        'icImage': imageUrl,
+        'icImage': icBase64,
         'createdAt': FieldValue.serverTimestamp(),
       });
 
