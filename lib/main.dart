@@ -6,6 +6,7 @@ import 'screens/admin_dashboard_screen.dart';
 import 'package:flutter/material.dart';
 import 'package:firebase_core/firebase_core.dart';
 import 'firebase_options.dart';
+import 'package:firebase_messaging/firebase_messaging.dart';
 import 'providers/auth_provider.dart'; // Fixed path
 
 
@@ -14,6 +15,14 @@ void main() async {
   await Firebase.initializeApp(
     options: DefaultFirebaseOptions.currentPlatform,
   );
+  // Request notification permissions and subscribe to announcements topic
+  try {
+    await FirebaseMessaging.instance.requestPermission();
+    await FirebaseMessaging.instance.subscribeToTopic('announcements');
+  } catch (e) {
+    // ignore: avoid_print
+    print('FCM init error: $e');
+  }
   runApp(
     MultiProvider(
       providers: [

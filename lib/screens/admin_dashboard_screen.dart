@@ -4,6 +4,7 @@ import 'package:cloud_firestore/cloud_firestore.dart';
 import '../providers/auth_provider.dart';
 import 'login_screen.dart';
 import '../screens/admin/financial_aid_admin_screen.dart';
+import '../screens/admin/announcements_admin_screen.dart';
 
 class AdminDashboardScreen extends StatefulWidget {
   const AdminDashboardScreen({super.key});
@@ -18,6 +19,7 @@ class _AdminDashboardScreenState extends State<AdminDashboardScreen> {
   final List<Widget> _pages = [
     const _AdminUsersBody(),
     const FinancialAidAdminScreen(),
+    const _AdminAnnouncementsBody(),
   ];
 
   @override
@@ -40,9 +42,22 @@ class _AdminDashboardScreenState extends State<AdminDashboardScreen> {
             icon: Icon(Icons.monetization_on),
             label: 'Financial Aid',
           ),
+          NavigationDestination(
+            icon: Icon(Icons.announcement),
+            label: 'Announcements',
+          ),
         ],
       ),
     );
+  }
+}
+
+class _AdminAnnouncementsBody extends StatelessWidget {
+  const _AdminAnnouncementsBody();
+
+  @override
+  Widget build(BuildContext context) {
+    return const AnnouncementsAdminScreen();
   }
 }
 

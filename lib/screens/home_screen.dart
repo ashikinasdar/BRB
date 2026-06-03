@@ -4,6 +4,7 @@ import '../providers/auth_provider.dart';
 import 'login_screen.dart';
 import '../screens/financial_aid/apply_financial_aid_screen.dart';
 import 'package:firebase_auth/firebase_auth.dart' hide AuthProvider;
+import 'announcements/announcements_list_screen.dart';
 
 class HomeScreen extends StatefulWidget {
   const HomeScreen({super.key});
@@ -92,10 +93,13 @@ class _HomeScreenState extends State<HomeScreen> {
                   Text('Kelantanese UTM Student Club', style: TextStyle(color: Colors.white70, fontSize: 14)),
                 ],
               ),
-              Container(
-                padding: const EdgeInsets.all(8),
-                decoration: BoxDecoration(color: Colors.white.withOpacity(0.2), shape: BoxShape.circle),
-                child: const Icon(Icons.notifications_none, color: Colors.white),
+              GestureDetector(
+                onTap: () => Navigator.push(context, MaterialPageRoute(builder: (_) => const AnnouncementsListScreen())),
+                child: Container(
+                  padding: const EdgeInsets.all(8),
+                  decoration: BoxDecoration(color: Colors.white.withOpacity(0.2), shape: BoxShape.circle),
+                  child: const Icon(Icons.notifications_none, color: Colors.white),
+                ),
               ),
             ],
           ),
