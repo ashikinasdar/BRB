@@ -101,58 +101,103 @@ class _AdminUsersBody extends StatelessWidget {
             return const Center(child: Text('No users found'));
           }
 
-          return ListView.builder(
-            padding: const EdgeInsets.all(16),
-            itemCount: snapshot.data!.docs.length,
-            itemBuilder: (context, index) {
-              final userDoc = snapshot.data!.docs[index];
-              final user = userDoc.data() as Map<String, dynamic>;
+          return Center(
+            child: ConstrainedBox(
+              constraints: const BoxConstraints(maxWidth: 800),
+              child: ListView.builder(
+                padding: const EdgeInsets.all(16),
+                itemCount: snapshot.data!.docs.length,
+                itemBuilder: (context, index) {
+                  final userDoc = snapshot.data!.docs[index];
+                  final user = userDoc.data() as Map<String, dynamic>;
+                  final status = user['status'] ?? 'Unknown';
+                  final primaryColor = Theme.of(context).colorScheme.primary;
+                  
+                  Color statusColor = Colors.orange;
+                  if (status == 'Approved') statusColor = Colors.green;
+                  if (status == 'Rejected') statusColor = Colors.red;
 
-              return Card(
-                margin: const EdgeInsets.only(bottom: 16),
-                child: ListTile(
-                  title: Text(user['fullName'] ?? 'N/A'),
-                  subtitle: Column(
-                    crossAxisAlignment: CrossAxisAlignment.start,
-                    children: [
-                      Text(user['email'] ?? 'N/A'),
-                      Text('Status: ${user['status'] ?? 'Unknown'}'),
-                      Text('Role: ${user['role'] ?? 'user'}'),
-                    ],
-                  ),
-                  leading: CircleAvatar(
-                    backgroundColor: Colors.grey[300],
-                    child: const Icon(Icons.person),
-                  ),
-                  trailing: Row(
-                    mainAxisSize: MainAxisSize.min,
-                    children: [
-                      // View IC Image
-                      IconButton(
-                        icon: const Icon(Icons.image, color: Colors.blue),
-                        onPressed: () => _showImageDialog(context, user['icImage']),
+                  return Card(
+                    shape: RoundedRectangleBorder(borderRadius: BorderRadius.circular(16)),
+                    margin: const EdgeInsets.only(bottom: 12),
+                    elevation: 2,
+                    child: ListTile(
+                      contentPadding: const EdgeInsets.symmetric(horizontal: 16, vertical: 8),
+                      title: Row(
+                        children: [
+                          Expanded(
+                            child: Text(user['fullName'] ?? 'N/A', style: const TextStyle(fontWeight: FontWeight.bold)),
+                          ),
+                          Container(
+                            padding: const EdgeInsets.symmetric(horizontal: 8, vertical: 2),
+                            decoration: BoxDecoration(
+                              color: statusColor.withOpacity(0.1),
+                              borderRadius: BorderRadius.circular(8),
+                            ),
+                            child: Text(
+                              status,
+                              style: TextStyle(color: statusColor, fontSize: 10, fontWeight: FontWeight.bold),
+                            ),
+                          ),
+                        ],
                       ),
-                      // Approve/Reject Buttons
-                      if (user['status'] == 'Pending Verification' || user['status'] == 'Rejected')
-                        IconButton(
-                          icon: const Icon(Icons.check_circle, color: Colors.green),
-                          onPressed: () => _updateStatus(context, userDoc.id, 'Approved'),
-                        ),
-                      if (user['status'] == 'Pending Verification' || user['status'] == 'Approved')
-                        IconButton(
-                          icon: const Icon(Icons.cancel, color: Colors.orange),
-                          onPressed: () => _updateStatus(context, userDoc.id, 'Rejected'),
-                        ),
-                      // Delete
-                      IconButton(
-                        icon: const Icon(Icons.delete, color: Colors.red),
-                        onPressed: () => _deleteUser(context, userDoc.id, user['fullName']),
+                      subtitle: Column(
+                        crossAxisAlignment: CrossAxisAlignment.start,
+                        children: [
+                          const SizedBox(height: 6),
+                          Row(
+                            children: [
+                              const Icon(Icons.email, size: 12, color: Colors.grey),
+                              const SizedBox(width: 4),
+                              Text(user['email'] ?? 'N/A', style: const TextStyle(color: Colors.black87, fontWeight: FontWeight.w600, fontSize: 13)),
+                            ]
+                          ),
+                          const SizedBox(height: 4),
+                          Row(
+                            children: [
+                              const Icon(Icons.security, size: 12, color: Colors.grey),
+                              const SizedBox(width: 4),
+                              Text('Role: ${user['role'] ?? 'user'}', style: const TextStyle(color: Colors.grey, fontSize: 12)),
+                            ],
+                          ),
+                        ],
                       ),
-                    ],
-                  ),
-                ),
-              );
-            },
+                      leading: CircleAvatar(
+                        backgroundColor: primaryColor.withOpacity(0.1),
+                        child: Icon(Icons.person, color: primaryColor),
+                      ),
+                      trailing: Row(
+                        mainAxisSize: MainAxisSize.min,
+                        children: [
+                          IconButton(
+                            icon: const Icon(Icons.image, color: Colors.blue),
+                            tooltip: 'View IC',
+                            onPressed: () => _showImageDialog(context, user['icImage']),
+                          ),
+                          if (status == 'Pending Verification' || status == 'Rejected')
+                            IconButton(
+                              icon: const Icon(Icons.check_circle, color: Colors.green),
+                              tooltip: 'Approve',
+                              onPressed: () => _updateStatus(context, userDoc.id, 'Approved'),
+                            ),
+                          if (status == 'Pending Verification' || status == 'Approved')
+                            IconButton(
+                              icon: const Icon(Icons.cancel, color: Colors.orange),
+                              tooltip: 'Reject',
+                              onPressed: () => _updateStatus(context, userDoc.id, 'Rejected'),
+                            ),
+                          IconButton(
+                            icon: const Icon(Icons.delete, color: Colors.red),
+                            tooltip: 'Delete User',
+                            onPressed: () => _deleteUser(context, userDoc.id, user['fullName'] ?? 'User'),
+                          ),
+                        ],
+                      ),
+                    ),
+                  );
+                },
+              ),
+            ),
           );
         },
       ),

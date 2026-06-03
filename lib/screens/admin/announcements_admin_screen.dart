@@ -17,36 +17,51 @@ class AnnouncementsAdminScreen extends StatelessWidget {
           final docs = snapshot.data?.docs ?? [];
           if (docs.isEmpty) return const Center(child: Text('No announcements'));
 
-          return ListView.builder(
-            padding: const EdgeInsets.all(12),
-            itemCount: docs.length,
-            itemBuilder: (context, index) {
-              final doc = docs[index];
-              final data = doc.data() as Map<String, dynamic>;
+          return Center(
+            child: ConstrainedBox(
+              constraints: const BoxConstraints(maxWidth: 800),
+              child: ListView.builder(
+                padding: const EdgeInsets.all(16),
+                itemCount: docs.length,
+                itemBuilder: (context, index) {
+                  final doc = docs[index];
+                  final data = doc.data() as Map<String, dynamic>;
 
-              return Card(
-                child: ListTile(
-                  title: Text(data['title'] ?? ''),
-                  subtitle: Text((data['body'] ?? '').toString(), maxLines: 2, overflow: TextOverflow.ellipsis),
-                  onTap: () => Navigator.push(context, MaterialPageRoute(builder: (_) => AnnouncementDetailScreen(announcementId: doc.id))),
-                  trailing: Row(
-                    mainAxisSize: MainAxisSize.min,
-                    children: [
-                      IconButton(
-                        icon: const Icon(Icons.edit, color: Colors.blue),
-                        onPressed: () async {
-                          await Navigator.push(context, MaterialPageRoute(builder: (_) => AnnouncementEditScreen(announcementId: doc.id)));
-                        },
+                  return Card(
+                    shape: RoundedRectangleBorder(borderRadius: BorderRadius.circular(16)),
+                    margin: const EdgeInsets.only(bottom: 12),
+                    elevation: 2,
+                    child: ListTile(
+                      contentPadding: const EdgeInsets.symmetric(horizontal: 16, vertical: 8),
+                      leading: CircleAvatar(
+                        backgroundColor: Colors.blue.withOpacity(0.1),
+                        child: const Icon(Icons.announcement, color: Colors.blue),
                       ),
-                      IconButton(
-                        icon: const Icon(Icons.delete, color: Colors.red),
-                        onPressed: () => _confirmDelete(context, doc.id),
+                      title: Text(data['title'] ?? '', style: const TextStyle(fontWeight: FontWeight.bold)),
+                      subtitle: Text((data['body'] ?? '').toString(), maxLines: 2, overflow: TextOverflow.ellipsis),
+                      onTap: () => Navigator.push(context, MaterialPageRoute(builder: (_) => AnnouncementDetailScreen(announcementId: doc.id))),
+                      trailing: Row(
+                        mainAxisSize: MainAxisSize.min,
+                        children: [
+                          IconButton(
+                            icon: const Icon(Icons.edit, color: Colors.blue),
+                            tooltip: 'Edit Announcement',
+                            onPressed: () async {
+                              await Navigator.push(context, MaterialPageRoute(builder: (_) => AnnouncementEditScreen(announcementId: doc.id)));
+                            },
+                          ),
+                          IconButton(
+                            icon: const Icon(Icons.delete, color: Colors.red),
+                            tooltip: 'Delete Announcement',
+                            onPressed: () => _confirmDelete(context, doc.id),
+                          ),
+                        ],
                       ),
-                    ],
-                  ),
-                ),
-              );
-            },
+                    ),
+                  );
+                },
+              ),
+            ),
           );
         },
       ),
