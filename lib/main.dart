@@ -36,7 +36,7 @@ class HimsakApp extends StatelessWidget {
 
   @override
   Widget build(BuildContext context) {
-    const primaryColor = Color(0xFFD32F2F); // Modern vibrant red
+    const primaryColor = Color(0xFF8B2247); // Maroon theme
     const bgColor = Color(0xFFF8F9FA); // Ultra-light cool gray
 
     return MaterialApp(
