@@ -5,6 +5,7 @@ import '../providers/auth_provider.dart';
 import 'login_screen.dart';
 import '../screens/admin/financial_aid_admin_screen.dart';
 import '../screens/admin/announcements_admin_screen.dart';
+import '../screens/admin/discounts_admin_screen.dart';
 
 class AdminDashboardScreen extends StatefulWidget {
   const AdminDashboardScreen({super.key});
@@ -20,6 +21,7 @@ class _AdminDashboardScreenState extends State<AdminDashboardScreen> {
     const _AdminUsersBody(),
     const FinancialAidAdminScreen(),
     const _AdminAnnouncementsBody(),
+    const DiscountsAdminScreen(),
   ];
 
   @override
@@ -45,6 +47,10 @@ class _AdminDashboardScreenState extends State<AdminDashboardScreen> {
           NavigationDestination(
             icon: Icon(Icons.announcement),
             label: 'Announcements',
+          ),
+          NavigationDestination(
+            icon: Icon(Icons.local_offer),
+            label: 'Discounts',
           ),
         ],
       ),

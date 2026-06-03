@@ -5,6 +5,7 @@ import 'login_screen.dart';
 import '../screens/financial_aid/apply_financial_aid_screen.dart';
 import 'package:firebase_auth/firebase_auth.dart' hide AuthProvider;
 import 'announcements/announcements_list_screen.dart';
+import 'discounts/discounts_list_screen.dart';
 
 class HomeScreen extends StatefulWidget {
   const HomeScreen({super.key});
@@ -50,7 +51,14 @@ class _HomeScreenState extends State<HomeScreen> {
       case 0:
         return _buildDashboard(context, primaryColor);
       case 1:
-        return const Center(child: Text("Discounts Coming Soon", style: TextStyle(color: Colors.grey)));
+        final user = FirebaseAuth.instance.currentUser;
+        if (user == null) {
+          return const Center(child: Text("Not logged in"));
+        }
+        return DiscountsListScreen(
+          userId: user.uid,
+          userName: user.displayName ?? "Student",
+        );
       case 2:
         final user = FirebaseAuth.instance.currentUser;
 
