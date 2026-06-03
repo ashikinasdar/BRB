@@ -4,7 +4,9 @@ import 'package:flutter/material.dart';
 import 'package:cloud_firestore/cloud_firestore.dart';
 import 'package:url_launcher/url_launcher.dart';
 import 'package:file_picker/file_picker.dart';
-
+import 'package:provider/provider.dart';
+import '../../providers/auth_provider.dart';
+import '../login_screen.dart';
 class DiscountsAdminScreen extends StatefulWidget {
   const DiscountsAdminScreen({super.key});
 
@@ -24,6 +26,8 @@ class _DiscountsAdminScreenState extends State<DiscountsAdminScreen> {
   final TextEditingController _termsController = TextEditingController();
   
   String _selectedCategory = 'Food';
+  String _searchQuery = '';
+  String _currentFilter = 'All'; // 'All', 'Food', 'Cafe', 'Services'
 
   // Image picking states
   Uint8List? _selectedFileBytes;
@@ -555,113 +559,193 @@ class _DiscountsAdminScreenState extends State<DiscountsAdminScreen> {
 
   @override
   Widget build(BuildContext context) {
-    final primaryColor = Theme.of(context).colorScheme.primary;
+    final primaryColor = Theme.of(context).primaryColor;
 
     return Scaffold(
-      appBar: AppBar(
-        title: const Text('Manage Discounts / Partners'),
-      ),
-      body: StreamBuilder<QuerySnapshot>(
-        stream: _restaurants.snapshots(),
-        builder: (context, snapshot) {
-          if (snapshot.connectionState == ConnectionState.waiting) {
-            return const Center(child: CircularProgressIndicator());
-          }
+      backgroundColor: const Color(0xFFF8F9FA),
+      body: Column(
+        children: [
+          // Header with search
+          Container(
+            width: double.infinity,
+            padding: const EdgeInsets.only(top: 60, left: 24, right: 24, bottom: 20),
+            decoration: BoxDecoration(
+              color: primaryColor,
+              borderRadius: const BorderRadius.only(bottomLeft: Radius.circular(24), bottomRight: Radius.circular(24)),
+            ),
+            child: Column(
+              crossAxisAlignment: CrossAxisAlignment.start,
+              children: [
+                Row(
+                  mainAxisAlignment: MainAxisAlignment.spaceBetween,
+                  children: [
+                    const Text('Discounts', style: TextStyle(color: Colors.white, fontSize: 32, fontWeight: FontWeight.bold)),
+                    IconButton(
+                      icon: const Icon(Icons.logout, color: Colors.white),
+                      tooltip: 'Log Out',
+                      onPressed: () {
+                        Provider.of<AuthProvider>(context, listen: false).logout();
+                        Navigator.pushReplacement(context, MaterialPageRoute(builder: (_) => const LoginScreen()));
+                      },
+                    ),
+                  ],
+                ),
+                const SizedBox(height: 20),
+                Container(
+                  padding: const EdgeInsets.symmetric(horizontal: 16),
+                  decoration: BoxDecoration(
+                    color: Colors.white.withOpacity(0.15),
+                    borderRadius: BorderRadius.circular(12),
+                  ),
+                  child: TextField(
+                    style: const TextStyle(color: Colors.white),
+                    decoration: const InputDecoration(
+                      icon: Icon(Icons.search, color: Colors.white70),
+                      hintText: 'Search partners...',
+                      hintStyle: TextStyle(color: Colors.white70),
+                      border: InputBorder.none,
+                    ),
+                    onChanged: (val) => setState(() => _searchQuery = val),
+                  ),
+                ),
+              ],
+            ),
+          ),
 
-          if (!snapshot.hasData || snapshot.data!.docs.isEmpty) {
-            return const Center(child: Text('No partners registered yet.'));
-          }
-
-          return Center(
-            child: ConstrainedBox(
-              constraints: const BoxConstraints(maxWidth: 800),
-              child: ListView.builder(
-                padding: const EdgeInsets.all(16),
-                itemCount: snapshot.data!.docs.length,
-                itemBuilder: (context, index) {
-                  final doc = snapshot.data!.docs[index];
-                  final data = doc.data() as Map<String, dynamic>;
-                  final name = data['name'] ?? 'N/A';
-                  final category = data['category'] ?? 'N/A';
-                  final offer = data['discountOffer'] ?? 'N/A';
-                  final location = data['location'] ?? 'N/A';
-
-                  return Card(
-                    shape: RoundedRectangleBorder(borderRadius: BorderRadius.circular(16)),
-                    margin: const EdgeInsets.only(bottom: 12),
-                    elevation: 2,
-                    child: ListTile(
-                      contentPadding: const EdgeInsets.symmetric(horizontal: 16, vertical: 8),
-                      title: Row(
-                        children: [
-                          Expanded(
-                            child: Text(
-                              name,
-                              style: const TextStyle(fontWeight: FontWeight.bold),
-                            ),
-                          ),
-                          Container(
-                            padding: const EdgeInsets.symmetric(horizontal: 8, vertical: 2),
-                            decoration: BoxDecoration(
-                              color: primaryColor.withOpacity(0.08),
-                              borderRadius: BorderRadius.circular(8),
-                            ),
-                            child: Text(
-                              category,
-                              style: TextStyle(color: primaryColor, fontSize: 10, fontWeight: FontWeight.bold),
-                            ),
-                          ),
-                        ],
-                      ),
-                      subtitle: Column(
-                        crossAxisAlignment: CrossAxisAlignment.start,
-                        children: [
-                          const SizedBox(height: 6),
-                          Text('Offer: $offer', style: const TextStyle(color: Colors.black87, fontWeight: FontWeight.w600)),
-                          const SizedBox(height: 4),
-                          Row(
-                            children: [
-                              const Icon(Icons.location_on, size: 12, color: Colors.grey),
-                              const SizedBox(width: 4),
-                              Expanded(
-                                child: Text(
-                                  location,
-                                  style: const TextStyle(color: Colors.grey, fontSize: 12),
-                                  maxLines: 1,
-                                  overflow: TextOverflow.ellipsis,
-                                ),
-                              ),
-                            ],
-                          ),
-                        ],
-                      ),
-                      trailing: Row(
-                        mainAxisSize: MainAxisSize.min,
-                        children: [
-                          IconButton(
-                            icon: const Icon(Icons.qr_code, color: Colors.orange),
-                            tooltip: 'View QR Code',
-                            onPressed: () => _showQRCodeDialog(doc.id, name),
-                          ),
-                          IconButton(
-                            icon: const Icon(Icons.edit, color: Colors.blue),
-                            tooltip: 'Edit Vendor',
-                            onPressed: () => _showFormDialog(docId: doc.id, initialData: data),
-                          ),
-                          IconButton(
-                            icon: const Icon(Icons.delete, color: Colors.red),
-                            tooltip: 'Delete Vendor',
-                            onPressed: () => _deleteRestaurant(doc.id, name),
-                          ),
-                        ],
+          // Tabs
+          SingleChildScrollView(
+            scrollDirection: Axis.horizontal,
+            padding: const EdgeInsets.symmetric(horizontal: 24, vertical: 16),
+            child: Row(
+              children: ['All', 'Food', 'Cafe', 'Services'].map((status) {
+                final isSelected = _currentFilter == status;
+                return GestureDetector(
+                  onTap: () => setState(() => _currentFilter = status),
+                  child: Container(
+                    margin: const EdgeInsets.only(right: 8),
+                    padding: const EdgeInsets.symmetric(horizontal: 16, vertical: 8),
+                    decoration: BoxDecoration(
+                      color: isSelected ? primaryColor : Colors.white,
+                      border: Border.all(color: isSelected ? primaryColor : Colors.grey.shade300),
+                      borderRadius: BorderRadius.circular(8),
+                    ),
+                    child: Text(
+                      status,
+                      style: TextStyle(
+                        color: isSelected ? Colors.white : Colors.grey.shade700,
+                        fontWeight: isSelected ? FontWeight.bold : FontWeight.normal,
                       ),
                     ),
-                  );
-                },
-              ),
+                  ),
+                );
+              }).toList(),
             ),
-          );
-        },
+          ),
+
+          // List
+          Expanded(
+            child: StreamBuilder<QuerySnapshot>(
+              stream: _restaurants.snapshots(),
+              builder: (context, snapshot) {
+                if (snapshot.connectionState == ConnectionState.waiting) return const Center(child: CircularProgressIndicator());
+                if (!snapshot.hasData || snapshot.data!.docs.isEmpty) return const Center(child: Text('No partners registered yet.'));
+
+                var docs = snapshot.data!.docs;
+
+                if (_currentFilter != 'All') {
+                  docs = docs.where((doc) => (doc.data() as Map<String, dynamic>)['category'] == _currentFilter).toList();
+                }
+
+                if (_searchQuery.trim().isNotEmpty) {
+                  docs = docs.where((doc) {
+                    final data = doc.data() as Map<String, dynamic>;
+                    final name = (data['name'] ?? '').toString().toLowerCase();
+                    final location = (data['location'] ?? '').toString().toLowerCase();
+                    return name.contains(_searchQuery.toLowerCase()) || location.contains(_searchQuery.toLowerCase());
+                  }).toList();
+                }
+
+                if (docs.isEmpty) return const Center(child: Text('No partners match your criteria'));
+
+                return ListView.builder(
+                  padding: const EdgeInsets.only(left: 24, right: 24, bottom: 24),
+                  itemCount: docs.length,
+                  itemBuilder: (context, index) {
+                    final doc = docs[index];
+                    final data = doc.data() as Map<String, dynamic>;
+                    final name = data['name'] ?? 'N/A';
+                    final category = data['category'] ?? 'N/A';
+                    final offer = data['discountOffer'] ?? 'N/A';
+                    final location = data['location'] ?? 'N/A';
+
+                    return Container(
+                      margin: const EdgeInsets.only(bottom: 16),
+                      decoration: BoxDecoration(
+                        color: Colors.white,
+                        borderRadius: BorderRadius.circular(16),
+                        boxShadow: [BoxShadow(color: Colors.black.withOpacity(0.04), blurRadius: 10, offset: const Offset(0, 4))],
+                      ),
+                      child: ListTile(
+                        contentPadding: const EdgeInsets.all(16),
+                        title: Row(
+                          children: [
+                            Expanded(child: Text(name, style: const TextStyle(fontWeight: FontWeight.bold))),
+                            Container(
+                              padding: const EdgeInsets.symmetric(horizontal: 8, vertical: 4),
+                              decoration: BoxDecoration(
+                                color: primaryColor.withOpacity(0.1),
+                                borderRadius: BorderRadius.circular(8),
+                              ),
+                              child: Text(
+                                category,
+                                style: TextStyle(color: primaryColor, fontSize: 10, fontWeight: FontWeight.bold),
+                              ),
+                            ),
+                          ],
+                        ),
+                        subtitle: Column(
+                          crossAxisAlignment: CrossAxisAlignment.start,
+                          children: [
+                            const SizedBox(height: 6),
+                            Text('Offer: $offer', style: const TextStyle(color: Colors.black87, fontWeight: FontWeight.w600)),
+                            const SizedBox(height: 4),
+                            Row(
+                              children: [
+                                const Icon(Icons.location_on, size: 12, color: Colors.grey),
+                                const SizedBox(width: 4),
+                                Expanded(child: Text(location, style: const TextStyle(color: Colors.grey, fontSize: 12), maxLines: 1, overflow: TextOverflow.ellipsis)),
+                              ],
+                            ),
+                          ],
+                        ),
+                        trailing: Row(
+                          mainAxisSize: MainAxisSize.min,
+                          children: [
+                            IconButton(
+                              icon: const Icon(Icons.qr_code, color: Colors.orange),
+                              tooltip: 'View QR Code',
+                              onPressed: () => _showQRCodeDialog(doc.id, name),
+                            ),
+                            IconButton(
+                              icon: const Icon(Icons.edit, color: Colors.blue),
+                              tooltip: 'Edit Vendor',
+                              onPressed: () => _showFormDialog(docId: doc.id, initialData: data),
+                            ),
+                            IconButton(
+                              icon: const Icon(Icons.delete, color: Colors.red),
+                              tooltip: 'Delete Vendor',
+                              onPressed: () => _deleteRestaurant(doc.id, name),
+                            ),
+                          ],
+                        ),
+                      ),
+                    );
+                  },
+                );
+              },
+            ),
+          ),
+        ],
       ),
       floatingActionButton: FloatingActionButton.extended(
         backgroundColor: primaryColor,
