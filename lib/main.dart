@@ -36,31 +36,49 @@ class HimsakApp extends StatelessWidget {
 
   @override
   Widget build(BuildContext context) {
-    const primaryColor = Color(0xFF8B2247);
-    const bgColor = Color(0xFFFAF8F5);
+    const primaryColor = Color(0xFF6B5ECE); // Indigo from reference
+    const bgColor = Color(0xFFF8F9FA); // Ultra-light cool gray
 
     return MaterialApp(
       title: 'HIMSAK',
       debugShowCheckedModeBanner: false,
       theme: ThemeData(
+        scaffoldBackgroundColor: bgColor,
+        primaryColor: primaryColor,
         colorScheme: ColorScheme.fromSeed(
           seedColor: primaryColor,
           primary: primaryColor,
           background: bgColor,
+          surface: Colors.white,
         ),
-        scaffoldBackgroundColor: bgColor,
+        fontFamily: 'Inter',
         appBarTheme: const AppBarTheme(
-          backgroundColor: primaryColor,
-          foregroundColor: Colors.white,
+          backgroundColor: bgColor,
+          foregroundColor: Colors.black87,
           elevation: 0,
+          centerTitle: true,
+          iconTheme: IconThemeData(color: Colors.black87),
+          titleTextStyle: TextStyle(
+            color: Colors.black87,
+            fontSize: 18,
+            fontWeight: FontWeight.w600,
+          ),
+        ),
+        cardTheme: CardTheme(
+          color: Colors.white,
+          elevation: 4,
+          shadowColor: Colors.black.withOpacity(0.06),
+          shape: RoundedRectangleBorder(borderRadius: BorderRadius.circular(24)),
+          margin: EdgeInsets.zero,
         ),
         elevatedButtonTheme: ElevatedButtonThemeData(
           style: ElevatedButton.styleFrom(
             backgroundColor: primaryColor,
             foregroundColor: Colors.white,
-            shape: RoundedRectangleBorder(
-              borderRadius: BorderRadius.circular(12),
-            ),
+            elevation: 0,
+            padding: const EdgeInsets.symmetric(horizontal: 24, vertical: 14),
+            shape: RoundedRectangleBorder(borderRadius: BorderRadius.circular(30)),
+            textStyle: const TextStyle(fontWeight: FontWeight.w600, fontSize: 16),
           ),
         ),
         useMaterial3: true,
