@@ -1,0 +1,29 @@
+{
+  "project_info": {
+    "project_number": "382066512298",
+    "project_id": "himsak-63ae0",
+    "storage_bucket": "himsak-63ae0.firebasestorage.app"
+  },
+  "client": [
+    {
+      "client_info": {
+        "mobilesdk_app_id": "1:382066512298:android:fa1c76d1079b9fcdd9dbd3",
+        "android_client_info": {
+          "package_name": "com.example.himsak_app"
+        }
+      },
+      "oauth_client": [],
+      "api_key": [
+        {
+          "current_key": "AIzaSyA62u7cpBMOrRD_p0MMBOvyVOHgt_j99Rw"
+        }
+      ],
+      "services": {
+        "appinvite_service": {
+          "other_platform_oauth_client": []
+        }
+      }
+    }
+  ],
+  "configuration_version": "1"
+}
