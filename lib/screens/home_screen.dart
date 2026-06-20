@@ -5,7 +5,8 @@ import 'login_screen.dart';
 import '../screens/financial_aid/apply_financial_aid_screen.dart';
 import 'package:firebase_auth/firebase_auth.dart' hide AuthProvider;
 import 'announcements/announcements_list_screen.dart';
-
+import 'package:cloud_firestore/cloud_firestore.dart';
+import 'events/event_detail_screen.dart';
 class HomeScreen extends StatefulWidget {
   const HomeScreen({super.key});
 
@@ -73,13 +74,20 @@ class _HomeScreenState extends State<HomeScreen> {
   Widget _buildDashboard(BuildContext context, Color primaryColor) {
     return Column(
       children: [
-        // Header Background
         Container(
           width: double.infinity,
-          padding: const EdgeInsets.only(top: 60, left: 24, right: 24, bottom: 40),
+          padding: const EdgeInsets.only(
+            top: 60,
+            left: 24,
+            right: 24,
+            bottom: 40,
+          ),
           decoration: BoxDecoration(
             color: primaryColor,
-            borderRadius: const BorderRadius.only(bottomLeft: Radius.circular(24), bottomRight: Radius.circular(24)),
+            borderRadius: const BorderRadius.only(
+              bottomLeft: Radius.circular(24),
+              bottomRight: Radius.circular(24),
+            ),
           ),
           child: Row(
             mainAxisAlignment: MainAxisAlignment.spaceBetween,
@@ -88,25 +96,305 @@ class _HomeScreenState extends State<HomeScreen> {
               Column(
                 crossAxisAlignment: CrossAxisAlignment.start,
                 children: const [
-                  Text('HIMSAK', style: TextStyle(color: Colors.white, fontSize: 24, fontWeight: FontWeight.bold)),
+                  Text(
+                    'HIMSAK',
+                    style: TextStyle(
+                      color: Colors.white,
+                      fontSize: 24,
+                      fontWeight: FontWeight.bold,
+                    ),
+                  ),
                   SizedBox(height: 4),
-                  Text('Kelantanese UTM Student Club', style: TextStyle(color: Colors.white70, fontSize: 14)),
+                  Text(
+                    'Kelantanese UTM Student Club',
+                    style: TextStyle(
+                      color: Colors.white70,
+                      fontSize: 14,
+                    ),
+                  ),
                 ],
               ),
               GestureDetector(
-                onTap: () => Navigator.push(context, MaterialPageRoute(builder: (_) => const AnnouncementsListScreen())),
+                onTap: () {
+                  Navigator.push(
+                    context,
+                    MaterialPageRoute(
+                      builder: (_) =>
+                      const AnnouncementsListScreen(),
+                    ),
+                  );
+                },
                 child: Container(
                   padding: const EdgeInsets.all(8),
-                  decoration: BoxDecoration(color: Colors.white.withOpacity(0.2), shape: BoxShape.circle),
-                  child: const Icon(Icons.notifications_none, color: Colors.white),
+                  decoration: BoxDecoration(
+                    color: Colors.white.withOpacity(0.2),
+                    shape: BoxShape.circle,
+                  ),
+                  child: const Icon(
+                    Icons.notifications_none,
+                    color: Colors.white,
+                  ),
                 ),
               ),
             ],
           ),
         ),
-        const Expanded(
-          child: Center(
-            child: Text("Dashboard Content Coming Soon", style: TextStyle(fontSize: 16, color: Colors.grey)),
+
+        Expanded(
+          child: SingleChildScrollView(
+            padding: const EdgeInsets.all(16),
+            child: Column(
+              crossAxisAlignment:
+              CrossAxisAlignment.start,
+              children: [
+
+                const Text(
+                  "Upcoming Events",
+                  style: TextStyle(
+                    fontSize: 22,
+                    fontWeight: FontWeight.bold,
+                  ),
+                ),
+
+                const SizedBox(height: 12),
+
+                StreamBuilder<QuerySnapshot>(
+                  stream: FirebaseFirestore.instance
+                      .collection('events')
+                      .orderBy(
+                    'createdAt',
+                    descending: true,
+                  )
+                      .snapshots(),
+                  builder: (context, snapshot) {
+                    if (!snapshot.hasData) {
+                      return const Center(
+                        child:
+                        CircularProgressIndicator(),
+                      );
+                    }
+
+                    final events =
+                        snapshot.data!.docs;
+
+                    if (events.isEmpty) {
+                      return const Card(
+                        child: Padding(
+                          padding:
+                          EdgeInsets.all(16),
+                          child: Text(
+                            "No events available",
+                          ),
+                        ),
+                      );
+                    }
+
+                    return Column(
+                      children: events.map((doc) {
+                        final event =
+                        doc.data()
+                        as Map<String,
+                            dynamic>;
+
+                        return GestureDetector(
+                          onTap: () {
+                            Navigator.push(
+                              context,
+                              MaterialPageRoute(
+                                builder: (_) => EventDetailScreen(
+                                  eventId: doc.id,
+                                  event: event,
+                                ),
+                              ),
+                            );
+                          },
+                          child: Card(
+                            elevation: 4,
+                            margin: const EdgeInsets.only(bottom: 16),
+                            shape: RoundedRectangleBorder(
+                              borderRadius: BorderRadius.circular(16),
+                            ),
+                            child: Column(
+                              crossAxisAlignment:
+                              CrossAxisAlignment.start,
+                              children: [
+
+                                ClipRRect(
+                                  borderRadius:
+                                  const BorderRadius.only(
+                                    topLeft: Radius.circular(16),
+                                    topRight: Radius.circular(16),
+                                  ),
+                                  child: event['imageUrl'] != null &&
+                                      event['imageUrl']
+                                          .toString()
+                                          .isNotEmpty
+                                      ? Image.network(
+                                    event['imageUrl'],
+                                    height: 180,
+                                    width: double.infinity,
+                                    fit: BoxFit.cover,
+                                  )
+                                      : Container(
+                                    height: 180,
+                                    color: Colors.grey[300],
+                                    child: const Center(
+                                      child: Icon(
+                                        Icons.event,
+                                        size: 70,
+                                      ),
+                                    ),
+                                  ),
+                                ),
+
+                                Padding(
+                                  padding:
+                                  const EdgeInsets.all(16),
+                                  child: Column(
+                                    crossAxisAlignment:
+                                    CrossAxisAlignment.start,
+                                    children: [
+
+                                      Text(
+                                        event['title'] ?? '',
+                                        style:
+                                        const TextStyle(
+                                          fontSize: 18,
+                                          fontWeight:
+                                          FontWeight.bold,
+                                        ),
+                                      ),
+
+                                      const SizedBox(height: 8),
+
+                                      Row(
+                                        children: [
+                                          const Icon(
+                                            Icons.location_on,
+                                            size: 18,
+                                          ),
+                                          const SizedBox(width: 6),
+                                          Expanded(
+                                            child: Text(
+                                              event['location'] ?? '',
+                                            ),
+                                          ),
+                                        ],
+                                      ),
+
+                                      const SizedBox(height: 10),
+
+                                      StreamBuilder<QuerySnapshot>(
+                                        stream: FirebaseFirestore
+                                            .instance
+                                            .collection(
+                                            'event_registrations')
+                                            .where(
+                                          'eventId',
+                                          isEqualTo: doc.id,
+                                        )
+                                            .snapshots(),
+                                        builder:
+                                            (context, snapshot) {
+
+                                          final count =
+                                              snapshot.data?.docs.length ??
+                                                  0;
+
+                                          return Text(
+                                            "👥 $count Joined",
+                                          );
+                                        },
+                                      ),
+                                    ],
+                                  ),
+                                ),
+                              ],
+                            ),
+                          ),
+                        );
+                      }).toList(),
+                    );
+                  },
+                ),
+
+                const SizedBox(height: 24),
+
+                const Text(
+                  "Latest Announcements",
+                  style: TextStyle(
+                    fontSize: 22,
+                    fontWeight: FontWeight.bold,
+                  ),
+                ),
+
+                const SizedBox(height: 12),
+
+                StreamBuilder<QuerySnapshot>(
+                  stream: FirebaseFirestore.instance
+                      .collection(
+                      'announcements')
+                      .orderBy(
+                    'createdAt',
+                    descending: true,
+                  )
+                      .limit(5)
+                      .snapshots(),
+                  builder: (context, snapshot) {
+                    if (!snapshot.hasData) {
+                      return const Center(
+                        child:
+                        CircularProgressIndicator(),
+                      );
+                    }
+
+                    final announcements =
+                        snapshot.data!.docs;
+
+                    if (announcements
+                        .isEmpty) {
+                      return const Card(
+                        child: Padding(
+                          padding:
+                          EdgeInsets.all(16),
+                          child: Text(
+                            "No announcements available",
+                          ),
+                        ),
+                      );
+                    }
+
+                    return Column(
+                      children: announcements
+                          .map((doc) {
+                        final announcement =
+                        doc.data()
+                        as Map<String,
+                            dynamic>;
+
+                        return Card(
+                          margin: const EdgeInsets.only(
+                            bottom: 12,
+                          ),
+                          child: ListTile(
+                            leading: const Icon(
+                              Icons.campaign,
+                              color: Colors.orange,
+                            ),
+                            title: Text(
+                              announcement['title'] ?? '',
+                            ),
+                            subtitle: Text(
+                              announcement['body'] ?? '',
+                            ),
+                          ),
+                        );
+                      }).toList(),
+                    );
+                  },
+                ),
+              ],
+            ),
           ),
         ),
       ],
