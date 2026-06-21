@@ -9,7 +9,8 @@ import '../screens/financial_aid/apply_financial_aid_screen.dart';
 import 'announcements/announcements_list_screen.dart';
 import 'announcements/announcement_detail_screen.dart';
 import 'discounts/discounts_list_screen.dart';
-import 'profile_screen.dart';
+import 'events/event_detail_screen.dart';
+import 'profile/profile_screen.dart';
 
 class HomeScreen extends StatefulWidget {
   const HomeScreen({super.key});
@@ -97,240 +98,271 @@ class _HomeScreenState extends State<HomeScreen> {
     }
   }
 
-  Widget _buildDashboard(BuildContext context, Color primaryColor) {
-    final user = FirebaseAuth.instance.currentUser;
-    final userName = user?.displayName ?? user?.email?.split('@')[0] ?? 'Student';
+ Widget _buildDashboard(BuildContext context, Color primaryColor) {
+  final user = FirebaseAuth.instance.currentUser;
+  final userName = user?.displayName ?? user?.email?.split('[at]')[0] ?? 'Student';
 
-    return SafeArea(
-      child: CustomScrollView(
-        slivers: [
-          SliverToBoxAdapter(
-            child: Padding(
-              padding: const EdgeInsets.symmetric(horizontal: 24, vertical: 20),
-              child: Column(
-                crossAxisAlignment: CrossAxisAlignment.start,
-                children: [
-                  // Top Header
-                  Row(
-                    mainAxisAlignment: MainAxisAlignment.spaceBetween,
-                    crossAxisAlignment: CrossAxisAlignment.center,
-                    children: [
-                      Column(
-                        crossAxisAlignment: CrossAxisAlignment.start,
-                        children: [
-                          const Text('Hello,', style: TextStyle(fontSize: 16, color: Colors.grey, fontWeight: FontWeight.w500)),
-                          const SizedBox(height: 4),
-                          Text('$userName!', style: const TextStyle(fontSize: 26, fontWeight: FontWeight.bold, color: Colors.black87)),
-                        ],
-                      ),
-                      Row(
-                        children: [
-                          GestureDetector(
-                            onTap: () => Navigator.push(context, MaterialPageRoute(builder: (_) => const AnnouncementsListScreen())),
-                            child: Container(
-                              padding: const EdgeInsets.all(10),
-                              decoration: BoxDecoration(
-                                color: Colors.white, 
-                                shape: BoxShape.circle, 
-                                boxShadow: [BoxShadow(color: Colors.black.withOpacity(0.04), blurRadius: 10, offset: const Offset(0, 4))]
-                              ),
-                              child: const Icon(Icons.notifications_none, color: Colors.black87, size: 22),
-                            ),
-                          ),
-                          const SizedBox(width: 12),
-                          CircleAvatar(
-                            radius: 22,
-                            backgroundColor: primaryColor.withOpacity(0.15),
-                            child: Icon(Icons.person, color: primaryColor),
-                          ),
-                        ],
-                      ),
-                    ],
-                  ),
-                  const SizedBox(height: 30),
-                  
-                  // Search Bar
-                  Container(
-                    padding: const EdgeInsets.symmetric(horizontal: 20, vertical: 16),
-                    decoration: BoxDecoration(
-                      color: Colors.white,
-                      borderRadius: BorderRadius.circular(30),
-                      boxShadow: [BoxShadow(color: Colors.black.withOpacity(0.03), blurRadius: 12, offset: const Offset(0, 4))],
-                    ),
-                    child: Row(
-                      children: const [
-                        Icon(Icons.search, color: Colors.black45, size: 22),
-                        SizedBox(width: 12),
-                        Text('Search for deals or updates...', style: TextStyle(color: Colors.black45, fontSize: 14)),
-                      ],
-                    ),
-                  ),
-                  const SizedBox(height: 32),
-
-                  // Quick Action Categories
-                  Row(
-                    mainAxisAlignment: MainAxisAlignment.spaceBetween,
-                    children: [
-                      _buildCategoryIcon(context, Icons.monetization_on, 'Aid', primaryColor, () => setState(() => _currentIndex = 2)),
-                      _buildCategoryIcon(context, Icons.local_offer, 'Discounts', primaryColor, () => setState(() => _currentIndex = 1)),
-                      _buildCategoryIcon(context, Icons.announcement, 'News', primaryColor, () => Navigator.push(context, MaterialPageRoute(builder: (_) => const AnnouncementsListScreen()))),
-                      _buildCategoryIcon(context, Icons.person, 'Profile', primaryColor, () => setState(() => _currentIndex = 3)),
-                    ],
-                  ),
-                  const SizedBox(height: 36),
-
-                  // Featured Highlight Card (Upcoming Appointment style)
-                  const Text('Upcoming Highlight', style: TextStyle(fontSize: 18, fontWeight: FontWeight.bold, color: Colors.black87)),
-                  const SizedBox(height: 16),
-                  Container(
-                    width: double.infinity,
-                    padding: const EdgeInsets.all(24),
-                    decoration: BoxDecoration(
-                      color: primaryColor,
-                      borderRadius: BorderRadius.circular(24),
-                      boxShadow: [BoxShadow(color: primaryColor.withOpacity(0.3), blurRadius: 12, offset: const Offset(0, 6))],
-                    ),
-                    child: Column(
+  return SafeArea(
+    child: CustomScrollView(
+      slivers: [
+        SliverToBoxAdapter(
+          child: Padding(
+            padding: const EdgeInsets.symmetric(horizontal: 24, vertical: 20),
+            child: Column(
+              crossAxisAlignment: CrossAxisAlignment.start,
+              children: [
+                // Top Header
+                Row(
+                  mainAxisAlignment: MainAxisAlignment.spaceBetween,
+                  crossAxisAlignment: CrossAxisAlignment.center,
+                  children: [
+                    Column(
                       crossAxisAlignment: CrossAxisAlignment.start,
                       children: [
-                        Row(
-                          children: [
-                            Container(
-                              padding: const EdgeInsets.all(10),
-                              decoration: BoxDecoration(color: Colors.white.withOpacity(0.2), shape: BoxShape.circle),
-                              child: const Icon(Icons.star, color: Colors.white, size: 24),
+                        const Text('Hello,', style: TextStyle(fontSize: 16, color: Colors.grey, fontWeight: FontWeight.w500)),
+                        const SizedBox(height: 4),
+                        Text('$userName!', style: const TextStyle(fontSize: 26, fontWeight: FontWeight.bold, color: Colors.black87)),
+                      ],
+                    ),
+                    Row(
+                      children: [
+                        GestureDetector(
+                          onTap: () => Navigator.push(context, MaterialPageRoute(builder: (_) => const AnnouncementsListScreen())),
+                          child: Container(
+                            padding: const EdgeInsets.all(10),
+                            decoration: BoxDecoration(
+                              color: Colors.white, 
+                              shape: BoxShape.circle, 
+                              boxShadow: [BoxShadow(color: Colors.black.withOpacity(0.04), blurRadius: 10, offset: const Offset(0, 4))]
                             ),
-                            const SizedBox(width: 16),
-                            Expanded(
-                              child: Column(
-                                crossAxisAlignment: CrossAxisAlignment.start,
-                                children: const [
-                                  Text('HIMSAK Annual Meeting', style: TextStyle(color: Colors.white, fontSize: 18, fontWeight: FontWeight.bold)),
-                                  SizedBox(height: 4),
-                                  Text('General Assembly (Online)', style: TextStyle(color: Colors.white70, fontSize: 13)),
-                                ],
-                              ),
-                            )
-                          ],
-                        ),
-                        const SizedBox(height: 20),
-                        Container(
-                          padding: const EdgeInsets.symmetric(horizontal: 16, vertical: 12),
-                          decoration: BoxDecoration(color: Colors.white.withOpacity(0.15), borderRadius: BorderRadius.circular(16)),
-                          child: Row(
-                            children: const [
-                              Icon(Icons.calendar_today, color: Colors.white, size: 16),
-                              SizedBox(width: 8),
-                              Text('Sat, 12 Oct 2024', style: TextStyle(color: Colors.white, fontSize: 13, fontWeight: FontWeight.w500)),
-                              Spacer(),
-                              Icon(Icons.access_time, color: Colors.white, size: 16),
-                              SizedBox(width: 8),
-                              Text('10:00 - 12:00 PM', style: TextStyle(color: Colors.white, fontSize: 13, fontWeight: FontWeight.w500)),
-                            ],
+                            child: const Icon(Icons.notifications_none, color: Colors.black87, size: 22),
                           ),
+                        ),
+                        const SizedBox(width: 12),
+                        CircleAvatar(
+                          radius: 22,
+                          backgroundColor: primaryColor.withOpacity(0.15),
+                          child: Icon(Icons.person, color: primaryColor),
                         ),
                       ],
                     ),
+                  ],
+                ),
+                const SizedBox(height: 30),
+                
+                // Search Bar
+                Container(
+                  padding: const EdgeInsets.symmetric(horizontal: 20, vertical: 16),
+                  decoration: BoxDecoration(
+                    color: Colors.white,
+                    borderRadius: BorderRadius.circular(30),
+                    boxShadow: [BoxShadow(color: Colors.black.withOpacity(0.03), blurRadius: 12, offset: const Offset(0, 4))],
                   ),
-                  const SizedBox(height: 36),
-                  
-                  Row(
-                    mainAxisAlignment: MainAxisAlignment.spaceBetween,
+                  child: Row(
+                    children: const [
+                      Icon(Icons.search, color: Colors.black45, size: 22),
+                      SizedBox(width: 12),
+                      Text('Search for deals or updates...', style: TextStyle(color: Colors.black45, fontSize: 14)),
+                    ],
+                  ),
+                ),
+                const SizedBox(height: 32),
+
+                // Quick Action Categories
+                Row(
+                  mainAxisAlignment: MainAxisAlignment.spaceBetween,
+                  children: [
+                    _buildCategoryIcon(context, Icons.monetization_on, 'Aid', primaryColor, () => setState(() => _currentIndex = 2)),
+                    _buildCategoryIcon(context, Icons.local_offer, 'Discounts', primaryColor, () => setState(() => _currentIndex = 1)),
+                    _buildCategoryIcon(context, Icons.announcement, 'News', primaryColor, () => Navigator.push(context, MaterialPageRoute(builder: (_) => const AnnouncementsListScreen()))),
+                    _buildCategoryIcon(context, Icons.person, 'Profile', primaryColor, () => setState(() => _currentIndex = 3)),
+                  ],
+                ),
+                const SizedBox(height: 36),
+
+                // Featured Highlight Card (Upcoming Appointment style)
+                const Text('Upcoming Highlight', style: TextStyle(fontSize: 18, fontWeight: FontWeight.bold, color: Colors.black87)),
+                const SizedBox(height: 16),
+                Container(
+                  width: double.infinity,
+                  padding: const EdgeInsets.all(24),
+                  decoration: BoxDecoration(
+                    color: primaryColor,
+                    borderRadius: BorderRadius.circular(24),
+                    boxShadow: [BoxShadow(color: primaryColor.withOpacity(0.3), blurRadius: 12, offset: const Offset(0, 6))],
+                  ),
+                  child: Column(
+                    crossAxisAlignment: CrossAxisAlignment.start,
                     children: [
-                      const Text('Recent Updates', style: TextStyle(fontSize: 18, fontWeight: FontWeight.bold, color: Colors.black87)),
-                      GestureDetector(
-                        onTap: () => Navigator.push(context, MaterialPageRoute(builder: (_) => const AnnouncementsListScreen())),
-                        child: const Text('See All', style: TextStyle(color: Colors.grey, fontWeight: FontWeight.w600, fontSize: 13)),
+                      Row(
+                        children: [
+                          Container(
+                            padding: const EdgeInsets.all(10),
+                            decoration: BoxDecoration(color: Colors.white.withOpacity(0.2), shape: BoxShape.circle),
+                            child: const Icon(Icons.star, color: Colors.white, size: 24),
+                          ),
+                          const SizedBox(width: 16),
+                          Expanded(
+                            child: Column(
+                              crossAxisAlignment: CrossAxisAlignment.start,
+                              children: const [
+                                Text('HIMSAK Annual Meeting', style: TextStyle(color: Colors.white, fontSize: 18, fontWeight: FontWeight.bold)),
+                                SizedBox(height: 4),
+                                Text('General Assembly (Online)', style: TextStyle(color: Colors.white70, fontSize: 13)),
+                              ],
+                            ),
+                          )
+                        ],
+                      ),
+                      const SizedBox(height: 20),
+                      Container(
+                        padding: const EdgeInsets.symmetric(horizontal: 16, vertical: 12),
+                        decoration: BoxDecoration(color: Colors.white.withOpacity(0.15), borderRadius: BorderRadius.circular(16)),
+                        child: Row(
+                          children: const [
+                            Icon(Icons.calendar_today, color: Colors.white, size: 16),
+                            SizedBox(width: 8),
+                            Text('Sat, 12 Oct 2024', style: TextStyle(color: Colors.white, fontSize: 13, fontWeight: FontWeight.w500)),
+                            Spacer(),
+                            Icon(Icons.access_time, color: Colors.white, size: 16),
+                            SizedBox(width: 8),
+                            Text('10:00 - 12:00 PM', style: TextStyle(color: Colors.white, fontSize: 13, fontWeight: FontWeight.w500)),
+                          ],
+                        ),
                       ),
                     ],
                   ),
-                  const SizedBox(height: 16),
-                ],
+                ),
+                const SizedBox(height: 36),
+                Row(
+                  mainAxisAlignment: MainAxisAlignment.spaceBetween,
+                  children: [
+                    const Text('Recent Updates', style: TextStyle(fontSize: 18, fontWeight: FontWeight.bold, color: Colors.black87)),
+                    GestureDetector(
+                      onTap: () => Navigator.push(context, MaterialPageRoute(builder: (_) => const AnnouncementsListScreen())),
+                      child: const Text('See All', style: TextStyle(color: Colors.grey, fontWeight: FontWeight.w600, fontSize: 13)),
+                    ),
+                  ],
+                ),
+                const SizedBox(height: 16),
+              ],
+            ),
+          ),
+        ),
+        // Recent Announcements - Using StreamBuilder with proper sliver handling
+        StreamBuilder<QuerySnapshot>(
+          stream: FirebaseFirestore.instance.collection('announcements').orderBy('createdAt', descending: true).limit(3).snapshots(),
+          builder: (context, snapshot) {
+            if (snapshot.connectionState == ConnectionState.waiting) {
+              return const SliverToBoxAdapter(
+                child: Center(child: CircularProgressIndicator()),
+              );
+            }
+            final docs = snapshot.data?.docs ?? [];
+            if (docs.isEmpty) {
+              return const SliverToBoxAdapter(
+                child: Center(child: Padding(padding: EdgeInsets.all(20), child: Text("No updates yet", style: TextStyle(color: Colors.grey)))),
+              );
+            }
+
+            return SliverPadding(
+              padding: const EdgeInsets.symmetric(horizontal: 24),
+              sliver: SliverList(
+                delegate: SliverChildBuilderDelegate(
+                  (context, index) {
+                    final data = docs[index].data() as Map<String, dynamic>;
+                    final id = docs[index].id;
+                    final title = data['title'] ?? '(no title)';
+                    final body = data['body'] ?? '';
+                    final imageUrl = data['imageUrl'];
+                    final createdAt = (data['createdAt'] as Timestamp?)?.toDate();
+
+                    return Container(
+                      margin: const EdgeInsets.only(bottom: 16),
+                      decoration: BoxDecoration(
+                        color: Colors.white,
+                        borderRadius: BorderRadius.circular(24),
+                        boxShadow: [BoxShadow(color: Colors.black.withOpacity(0.04), blurRadius: 10, offset: const Offset(0, 4))],
+                      ),
+                      child: Material(
+                        color: Colors.transparent,
+                        child: InkWell(
+                          borderRadius: BorderRadius.circular(24),
+                          onTap: () => Navigator.push(context, MaterialPageRoute(builder: (_) => AnnouncementDetailScreen(announcementId: id))),
+                          child: Padding(
+                            padding: const EdgeInsets.all(12),
+                            child: Row(
+                              children: [
+                                if (imageUrl != null && imageUrl.isNotEmpty)
+                                  ClipRRect(
+                                    borderRadius: BorderRadius.circular(16),
+                                    child: SizedBox(
+                                      width: 80,
+                                      height: 80,
+                                      child: imageUrl.startsWith('http') 
+                                        ? Image.network(imageUrl, fit: BoxFit.cover) 
+                                        : Image.memory(base64Decode(imageUrl), fit: BoxFit.cover),
+                                    ),
+                                  )
+                                else
+                                  Container(
+                                    width: 80,
+                                    height: 80,
+                                    decoration: BoxDecoration(color: primaryColor.withOpacity(0.1), borderRadius: BorderRadius.circular(16)),
+                                    child: Icon(Icons.announcement, color: primaryColor, size: 30),
+                                  ),
+                                const SizedBox(width: 16),
+                                Expanded(
+                                  child: Column(
+                                    crossAxisAlignment: CrossAxisAlignment.start,
+                                    children: [
+                                      Text(title, style: const TextStyle(fontWeight: FontWeight.bold, fontSize: 16, color: Colors.black87), maxLines: 1, overflow: TextOverflow.ellipsis),
+                                      const SizedBox(height: 6),
+                                      Text(body, style: const TextStyle(fontSize: 13, color: Colors.grey, height: 1.4), maxLines: 2, overflow: TextOverflow.ellipsis),
+                                    ],
+                                  ),
+                                ),
+                              ],
+                            ),
+                          ),
+                        ),
+                      ),
+                    );
+                  },
+                  childCount: docs.length,
+                ),
               ),
+            );
+          },
+        ),
+        const SliverPadding(padding: EdgeInsets.only(bottom: 24)),
+      ],
+    ),
+  );
+}
+  Widget _buildProfile(BuildContext context, Color primaryColor) {
+    return Center(
+      child: Column(
+        mainAxisAlignment: MainAxisAlignment.center,
+        children: [
+          const Icon(Icons.person_outline, size: 80, color: Colors.grey),
+          const SizedBox(height: 16),
+          const Text("Profile Section Coming Soon", style: TextStyle(fontSize: 16, color: Colors.grey)),
+          const SizedBox(height: 32),
+          ElevatedButton.icon(
+            onPressed: () {
+              context.read<AuthProvider>().logout();
+              Navigator.pushReplacement(context, MaterialPageRoute(builder: (_) => const LoginScreen()));
+            },
+            icon: const Icon(Icons.logout),
+            label: const Text("Log Out"),
+            style: ElevatedButton.styleFrom(
+              padding: const EdgeInsets.symmetric(horizontal: 24, vertical: 12),
             ),
           ),
 
           // Recent Announcements Stream
-          StreamBuilder<QuerySnapshot>(
-            stream: FirebaseFirestore.instance.collection('announcements').orderBy('createdAt', descending: true).limit(3).snapshots(),
-            builder: (context, snapshot) {
-              if (snapshot.connectionState == ConnectionState.waiting) {
-                return const SliverToBoxAdapter(child: Center(child: CircularProgressIndicator()));
-              }
-              final docs = snapshot.data?.docs ?? [];
-              if (docs.isEmpty) {
-                return const SliverToBoxAdapter(child: Center(child: Padding(padding: EdgeInsets.all(20), child: Text("No updates yet", style: TextStyle(color: Colors.grey)))));
-              }
-
-              return SliverPadding(
-                padding: const EdgeInsets.symmetric(horizontal: 24),
-                sliver: SliverList(
-                  delegate: SliverChildBuilderDelegate(
-                    (context, index) {
-                      final data = docs[index].data() as Map<String, dynamic>;
-                      final id = docs[index].id;
-                      final title = data['title'] ?? '(no title)';
-                      final body = data['body'] ?? '';
-                      final imageUrl = data['imageUrl'];
-                      final createdAt = (data['createdAt'] as Timestamp?)?.toDate();
-
-                      return Container(
-                        margin: const EdgeInsets.only(bottom: 16),
-                        decoration: BoxDecoration(
-                          color: Colors.white,
-                          borderRadius: BorderRadius.circular(24),
-                          boxShadow: [BoxShadow(color: Colors.black.withOpacity(0.04), blurRadius: 10, offset: const Offset(0, 4))],
-                        ),
-                        child: Material(
-                          color: Colors.transparent,
-                          child: InkWell(
-                            borderRadius: BorderRadius.circular(24),
-                            onTap: () => Navigator.push(context, MaterialPageRoute(builder: (_) => AnnouncementDetailScreen(announcementId: id))),
-                            child: Padding(
-                              padding: const EdgeInsets.all(12),
-                              child: Row(
-                                children: [
-                                  if (imageUrl != null && imageUrl.isNotEmpty)
-                                    ClipRRect(
-                                      borderRadius: BorderRadius.circular(16),
-                                      child: SizedBox(
-                                        width: 80,
-                                        height: 80,
-                                        child: imageUrl.startsWith('http') ? Image.network(imageUrl, fit: BoxFit.cover) : Image.memory(base64Decode(imageUrl), fit: BoxFit.cover),
-                                      ),
-                                    )
-                                  else
-                                    Container(
-                                      width: 80,
-                                      height: 80,
-                                      decoration: BoxDecoration(color: primaryColor.withOpacity(0.1), borderRadius: BorderRadius.circular(16)),
-                                      child: Icon(Icons.announcement, color: primaryColor, size: 30),
-                                    ),
-                                  const SizedBox(width: 16),
-                                  Expanded(
-                                    child: Column(
-                                      crossAxisAlignment: CrossAxisAlignment.start,
-                                      children: [
-                                        Text(title, style: const TextStyle(fontWeight: FontWeight.bold, fontSize: 16, color: Colors.black87), maxLines: 1, overflow: TextOverflow.ellipsis),
-                                        const SizedBox(height: 6),
-                                        Text(body, style: const TextStyle(fontSize: 13, color: Colors.grey, height: 1.4), maxLines: 2, overflow: TextOverflow.ellipsis),
-                                      ],
-                                    ),
-                                  ),
-                                ],
-                              ),
-                            ),
-                          ),
-                        ),
-                      );
-                    },
-                    childCount: docs.length,
-                  ),
-                ),
-              );
-            },
-          ),
-          const SliverPadding(padding: EdgeInsets.only(bottom: 24)),
+          
         ],
       ),
     );
