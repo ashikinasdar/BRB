@@ -88,12 +88,8 @@ class _ProfileScreenState extends State<ProfileScreen> {
                   ),
                 ),
 
-                // ── Saved Events ─────────────────────────────────────────
-                if (uid != null)
-                  Padding(
-                    padding: const EdgeInsets.fromLTRB(20, 20, 20, 0),
-                    child: _SavedEventsCard(uid: uid, primaryColor: primaryColor),
-                  ),
+               
+                
 
                 // ── Claimed Discounts ────────────────────────────────────
                 if (uid != null)
@@ -302,64 +298,7 @@ class _InfoRow extends StatelessWidget {
   }
 }
 
-class _SavedEventsCard extends StatelessWidget {
-  final String uid;
-  final Color primaryColor;
 
-  const _SavedEventsCard({required this.uid, required this.primaryColor});
-
-  @override
-  Widget build(BuildContext context) {
-    return Card(
-      elevation: 0,
-      shape: RoundedRectangleBorder(
-        borderRadius: BorderRadius.circular(20),
-        side: BorderSide(color: Colors.grey.shade200),
-      ),
-      child: Padding(
-        padding: const EdgeInsets.all(20),
-        child: Column(
-          crossAxisAlignment: CrossAxisAlignment.start,
-          children: [
-            const Text(
-              'Saved Events',
-              style: TextStyle(fontSize: 16, fontWeight: FontWeight.bold, color: Colors.black87),
-            ),
-            const SizedBox(height: 12),
-            StreamBuilder<QuerySnapshot>(
-              stream: FirebaseFirestore.instance
-                  .collection('users')
-                  .doc(uid)
-                  .collection('savedEvents')
-                  .orderBy('savedAt', descending: true)
-                  .limit(5)
-                  .snapshots(),
-              builder: (context, snap) {
-                if (snap.connectionState == ConnectionState.waiting) {
-                  return const Center(child: CircularProgressIndicator());
-                }
-                final docs = snap.data?.docs ?? [];
-                if (docs.isEmpty) {
-                  return const _EmptyState(message: 'No saved events yet.');
-                }
-                return Column(
-                  children: docs.map((doc) {
-                    final data = doc.data() as Map<String, dynamic>;
-                    return _EventTile(
-                      title: data['eventName'] ?? 'Event',
-                      date: data['eventDate'] ?? '',
-                      primaryColor: primaryColor,
-                    );
-                  }).toList(),
-                );
-              },
-            ),
-          ],
-        ),
-      ),
-    );
-  }
-}
 
 class _ClaimedDiscountsCard extends StatelessWidget {
   final String uid;
