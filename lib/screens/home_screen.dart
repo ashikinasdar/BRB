@@ -100,7 +100,9 @@ class _HomeScreenState extends State<HomeScreen> {
 
  Widget _buildDashboard(BuildContext context, Color primaryColor) {
   final user = FirebaseAuth.instance.currentUser;
-  final userName = user?.displayName ?? user?.email?.split('[at]')[0] ?? 'Student';
+  final userName =
+      user?.email?.split('@').first ??
+          'Student';
 
   return SafeArea(
     child: CustomScrollView(
@@ -151,22 +153,6 @@ class _HomeScreenState extends State<HomeScreen> {
                 const SizedBox(height: 30),
                 
                 // Search Bar
-                Container(
-                  padding: const EdgeInsets.symmetric(horizontal: 20, vertical: 16),
-                  decoration: BoxDecoration(
-                    color: Colors.white,
-                    borderRadius: BorderRadius.circular(30),
-                    boxShadow: [BoxShadow(color: Colors.black.withOpacity(0.03), blurRadius: 12, offset: const Offset(0, 4))],
-                  ),
-                  child: Row(
-                    children: const [
-                      Icon(Icons.search, color: Colors.black45, size: 22),
-                      SizedBox(width: 12),
-                      Text('Search for deals or updates...', style: TextStyle(color: Colors.black45, fontSize: 14)),
-                    ],
-                  ),
-                ),
-                const SizedBox(height: 32),
 
                 // Quick Action Categories
                 Row(
@@ -181,59 +167,9 @@ class _HomeScreenState extends State<HomeScreen> {
                 const SizedBox(height: 36),
 
                 // Featured Highlight Card (Upcoming Appointment style)
-                const Text('Upcoming Highlight', style: TextStyle(fontSize: 18, fontWeight: FontWeight.bold, color: Colors.black87)),
-                const SizedBox(height: 16),
-                Container(
-                  width: double.infinity,
-                  padding: const EdgeInsets.all(24),
-                  decoration: BoxDecoration(
-                    color: primaryColor,
-                    borderRadius: BorderRadius.circular(24),
-                    boxShadow: [BoxShadow(color: primaryColor.withOpacity(0.3), blurRadius: 12, offset: const Offset(0, 6))],
-                  ),
-                  child: Column(
-                    crossAxisAlignment: CrossAxisAlignment.start,
-                    children: [
-                      Row(
-                        children: [
-                          Container(
-                            padding: const EdgeInsets.all(10),
-                            decoration: BoxDecoration(color: Colors.white.withOpacity(0.2), shape: BoxShape.circle),
-                            child: const Icon(Icons.star, color: Colors.white, size: 24),
-                          ),
-                          const SizedBox(width: 16),
-                          Expanded(
-                            child: Column(
-                              crossAxisAlignment: CrossAxisAlignment.start,
-                              children: const [
-                                Text('HIMSAK Annual Meeting', style: TextStyle(color: Colors.white, fontSize: 18, fontWeight: FontWeight.bold)),
-                                SizedBox(height: 4),
-                                Text('General Assembly (Online)', style: TextStyle(color: Colors.white70, fontSize: 13)),
-                              ],
-                            ),
-                          )
-                        ],
-                      ),
-                      const SizedBox(height: 20),
-                      Container(
-                        padding: const EdgeInsets.symmetric(horizontal: 16, vertical: 12),
-                        decoration: BoxDecoration(color: Colors.white.withOpacity(0.15), borderRadius: BorderRadius.circular(16)),
-                        child: Row(
-                          children: const [
-                            Icon(Icons.calendar_today, color: Colors.white, size: 16),
-                            SizedBox(width: 8),
-                            Text('Sat, 12 Oct 2024', style: TextStyle(color: Colors.white, fontSize: 13, fontWeight: FontWeight.w500)),
-                            Spacer(),
-                            Icon(Icons.access_time, color: Colors.white, size: 16),
-                            SizedBox(width: 8),
-                            Text('10:00 - 12:00 PM', style: TextStyle(color: Colors.white, fontSize: 13, fontWeight: FontWeight.w500)),
-                          ],
-                        ),
-                      ),
-                    ],
-                  ),
-                ),
-                const SizedBox(height: 36),
+
+
+
                 Row(
                   mainAxisAlignment: MainAxisAlignment.spaceBetween,
                   children: [
