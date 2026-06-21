@@ -889,6 +889,20 @@ class _QRScannerSimulationScreenState extends State<QRScannerSimulationScreen> {
         'claimedAt': FieldValue.serverTimestamp(),
       });
 
+      final profileClaimRef = FirebaseFirestore.instance
+    .collection('users')
+    .doc(widget.userId)
+    .collection('claimedDiscounts')
+    .doc(ref.id);
+
+await profileClaimRef.set({
+  'merchantName': widget.restaurantName,
+  'discountLabel': widget.discountOffer,
+  'restaurantId': widget.restaurantId,
+  'claimedAt': FieldValue.serverTimestamp(),
+});
+
+
       if (!mounted) return;
 
       // Show beautiful success popup
