@@ -1,6 +1,7 @@
 import 'dart:convert';
 import 'package:flutter/material.dart';
 import 'package:cloud_firestore/cloud_firestore.dart';
+import 'package:mobile_scanner/mobile_scanner.dart';
 
 // --- MAIN STUDENT LIST OF DISCOUNTS ---
 class DiscountsListScreen extends StatefulWidget {
@@ -816,7 +817,7 @@ class _DiscountDetailScreenState extends State<DiscountDetailScreen> {
   }
 }
 
-// --- FUTURISTIC QR CODE SCANNER SIMULATOR ---
+// --- REAL QR CODE SCANNER ---
 class QRScannerSimulationScreen extends StatefulWidget {
   final String restaurantId;
   final String restaurantName;
@@ -837,28 +838,28 @@ class QRScannerSimulationScreen extends StatefulWidget {
   State<QRScannerSimulationScreen> createState() => _QRScannerSimulationScreenState();
 }
 
-class _QRScannerSimulationScreenState extends State<QRScannerSimulationScreen> with SingleTickerProviderStateMixin {
-  late AnimationController _laserController;
+class _QRScannerSimulationScreenState extends State<QRScannerSimulationScreen> {
   bool _isScanning = false;
-  final TextEditingController _manualCodeController = TextEditingController();
+  bool _hasClaimed = false;
+  late MobileScannerController _scannerController;
 
   @override
   void initState() {
     super.initState();
-    _laserController = AnimationController(
-      duration: const Duration(seconds: 2),
-      vsync: this,
-    )..repeat(reverse: true);
+    _scannerController = MobileScannerController(
+      detectionSpeed: DetectionSpeed.noDuplicates,
+    );
   }
 
   @override
   void dispose() {
-    _laserController.dispose();
-    _manualCodeController.dispose();
+    _scannerController.dispose();
     super.dispose();
   }
 
   Future<void> _handleSuccessfulScan(String scannedData) async {
+    if (_hasClaimed) return;
+
     // Validate QR code data. Matches format: himsak_discount:<docId>
     final expectedData = 'himsak_discount:${widget.restaurantId}';
     
@@ -872,7 +873,10 @@ class _QRScannerSimulationScreenState extends State<QRScannerSimulationScreen> w
       return;
     }
 
-    setState(() => _isScanning = true);
+    setState(() {
+      _isScanning = true;
+      _hasClaimed = true;
+    });
     
     try {
       // Save claim in Firestore
@@ -892,9 +896,12 @@ class _QRScannerSimulationScreenState extends State<QRScannerSimulationScreen> w
       _showSuccessDialog(claimId);
 
     } catch (e) {
-      ScaffoldMessenger.of(context).showSnackBar(
-        SnackBar(content: Text('Error claiming discount: $e')),
-      );
+      setState(() => _hasClaimed = false);
+      if (mounted) {
+        ScaffoldMessenger.of(context).showSnackBar(
+          SnackBar(content: Text('Error claiming discount: $e')),
+        );
+      }
     } finally {
       if (mounted) setState(() => _isScanning = false);
     }
@@ -1016,16 +1023,79 @@ class _QRScannerSimulationScreenState extends State<QRScannerSimulationScreen> w
         backgroundColor: Colors.transparent,
         foregroundColor: Colors.white,
         elevation: 0,
+        actions: [
+          IconButton(
+            icon: ValueListenableBuilder(
+              valueListenable: _scannerController,
+              builder: (context, state, child) {
+                switch (state.torchState) {
+                  case TorchState.off:
+                    return const Icon(Icons.flash_off, color: Colors.grey);
+                  case TorchState.on:
+                    return const Icon(Icons.flash_on, color: Colors.yellow);
+                  case TorchState.auto:
+                  case TorchState.unavailable:
+                  default:
+                    return const Icon(Icons.flash_auto, color: Colors.grey);
+                }
+              },
+            ),
+            onPressed: () => _scannerController.toggleTorch(),
+          ),
+          IconButton(
+            icon: ValueListenableBuilder(
+              valueListenable: _scannerController,
+              builder: (context, state, child) {
+                switch (state.cameraDirection) {
+                  case CameraFacing.front:
+                    return const Icon(Icons.camera_front);
+                  case CameraFacing.back:
+                    return const Icon(Icons.camera_rear);
+                  case CameraFacing.external:
+                  default:
+                    return const Icon(Icons.camera);
+                }
+              },
+            ),
+            onPressed: () => _scannerController.switchCamera(),
+          ),
+        ],
       ),
       body: _isScanning
           ? const Center(child: CircularProgressIndicator(color: Colors.white))
-          : SingleChildScrollView(
-              child: Center(
-                child: ConstrainedBox(
-                  constraints: const BoxConstraints(maxWidth: 500),
+          : Stack(
+              children: [
+                MobileScanner(
+                  controller: _scannerController,
+                  onDetect: (capture) {
+                    final List<Barcode> barcodes = capture.barcodes;
+                    if (barcodes.isNotEmpty) {
+                      final String? rawValue = barcodes.first.rawValue;
+                      if (rawValue != null) {
+                        _handleSuccessfulScan(rawValue);
+                      }
+                    }
+                  },
+                ),
+                // Viewfinder overlay
+                Container(
+                  decoration: ShapeDecoration(
+                    shape: QrScannerOverlayShape(
+                      borderColor: Colors.white,
+                      borderRadius: 24,
+                      borderLength: 40,
+                      borderWidth: 8,
+                      cutOutSize: 280,
+                    ),
+                  ),
+                ),
+                // Instruction Text
+                Positioned(
+                  top: 60,
+                  left: 0,
+                  right: 0,
                   child: Column(
                     children: [
-                      const SizedBox(height: 40),
                       const Text(
                         'HIMSAK Scanner',
                         style: TextStyle(color: Colors.white, fontSize: 20, fontWeight: FontWeight.bold),
@@ -1033,186 +1103,128 @@ class _QRScannerSimulationScreenState extends State<QRScannerSimulationScreen> w
                       const SizedBox(height: 4),
                       Text(
                         'Align the restaurant QR code within the frame',
-                        style: TextStyle(color: Colors.grey.shade400, fontSize: 13),
+                        style: TextStyle(color: Colors.grey.shade300, fontSize: 13),
                       ),
-                      const SizedBox(height: 40),
-
-                      // Futuristic Viewfinder Box
-                      Stack(
-                        alignment: Alignment.center,
-                        children: [
-                          Container(
-                            height: 260,
-                            width: 260,
-                            decoration: BoxDecoration(
-                              border: Border.all(color: Colors.white.withOpacity(0.3), width: 2),
-                              borderRadius: BorderRadius.circular(24),
-                            ),
-                          ),
-                          
-                          // Glowing corners
-                          Positioned(
-                            top: 0, left: 0,
-                            child: _buildCornerWidget(top: true, left: true),
-                          ),
-                          Positioned(
-                            top: 0, right: 0,
-                            child: _buildCornerWidget(top: true, left: false),
-                          ),
-                          Positioned(
-                            bottom: 0, left: 0,
-                            child: _buildCornerWidget(top: false, left: true),
-                          ),
-                          Positioned(
-                            bottom: 0, right: 0,
-                            child: _buildCornerWidget(top: false, left: false),
-                          ),
-
-                          // Pulsing animated Laser Line
-                          AnimatedBuilder(
-                            animation: _laserController,
-                            builder: (context, child) {
-                              return Positioned(
-                                top: 12 + (_laserController.value * 236),
-                                child: Container(
-                                  width: 236,
-                                  height: 3,
-                                  decoration: BoxDecoration(
-                                    color: Colors.red,
-                                    boxShadow: [
-                                      BoxShadow(
-                                        color: Colors.red.withOpacity(0.8),
-                                        blurRadius: 10,
-                                        spreadRadius: 2,
-                                      ),
-                                    ],
-                                  ),
-                                ),
-                              );
-                            },
-                          ),
-
-                          const Icon(Icons.qr_code_2_rounded, size: 100, color: Colors.white10),
-                        ],
-                      ),
-
-                      const SizedBox(height: 50),
-
-                      // TEST SIMULATION DRAWER
-                      Container(
-                        margin: const EdgeInsets.symmetric(horizontal: 24),
-                        padding: const EdgeInsets.all(20),
-                        decoration: BoxDecoration(
-                          color: Colors.grey.shade900,
-                          borderRadius: BorderRadius.circular(20),
-                          border: Border.all(color: Colors.grey.shade800),
-                        ),
-                        child: Column(
-                          children: [
-                            const Row(
-                              mainAxisAlignment: MainAxisAlignment.center,
-                              children: [
-                                Icon(Icons.developer_mode, color: Colors.blueAccent, size: 18),
-                                SizedBox(width: 6),
-                                Text(
-                                  'Developer Test Console',
-                                  style: TextStyle(color: Colors.white, fontWeight: FontWeight.bold, fontSize: 13),
-                                ),
-                              ],
-                            ),
-                            const SizedBox(height: 12),
-                            Text(
-                              'Running in emulator mode. Click below to simulate scanning the QR code physically at this restaurant.',
-                              textAlign: TextAlign.center,
-                              style: TextStyle(color: Colors.grey.shade400, fontSize: 11),
-                            ),
-                            const SizedBox(height: 16),
-                            SizedBox(
-                              width: double.infinity,
-                              height: 44,
-                              child: ElevatedButton.icon(
-                                style: ElevatedButton.styleFrom(
-                                  backgroundColor: Colors.blueAccent,
-                                  shape: RoundedRectangleBorder(borderRadius: BorderRadius.circular(12)),
-                                ),
-                                onPressed: () {
-                                  // Simulate correct QR scan
-                                  final mockQRData = 'himsak_discount:${widget.restaurantId}';
-                                  _handleSuccessfulScan(mockQRData);
-                                },
-                                icon: const Icon(Icons.sensors, color: Colors.white, size: 18),
-                                label: const Text('Simulate Scan', style: TextStyle(color: Colors.white, fontWeight: FontWeight.bold)),
-                              ),
-                            ),
-                            const SizedBox(height: 16),
-                            
-                            // Manual Input Fallback
-                            const Text('OR ENTER QR CODE DATA MANUALLY', style: TextStyle(color: Colors.grey, fontSize: 9, fontWeight: FontWeight.bold)),
-                            const SizedBox(height: 8),
-                            Row(
-                              children: [
-                                Expanded(
-                                  child: TextField(
-                                    controller: _manualCodeController,
-                                    style: const TextStyle(color: Colors.white, fontSize: 12),
-                                    decoration: InputDecoration(
-                                      hintText: 'e.g. himsak_discount:docId',
-                                      hintStyle: const TextStyle(color: Colors.grey, fontSize: 12),
-                                      contentPadding: const EdgeInsets.symmetric(horizontal: 12, vertical: 8),
-                                      filled: true,
-                                      fillColor: Colors.black,
-                                      border: OutlineInputBorder(borderRadius: BorderRadius.circular(8), borderSide: BorderSide.none),
-                                    ),
-                                  ),
-                                ),
-                                const SizedBox(width: 8),
-                                ElevatedButton(
-                                  style: ElevatedButton.styleFrom(
-                                    backgroundColor: Colors.grey.shade800,
-                                    shape: RoundedRectangleBorder(borderRadius: BorderRadius.circular(8)),
-                                    padding: const EdgeInsets.symmetric(horizontal: 16),
-                                  ),
-                                  onPressed: () {
-                                    _handleSuccessfulScan(_manualCodeController.text.trim());
-                                  },
-                                  child: const Text('Submit', style: TextStyle(color: Colors.white, fontSize: 12)),
-                                ),
-                              ],
-                            ),
-                          ],
-                        ),
-                      ),
-                      const SizedBox(height: 40),
                     ],
                   ),
                 ),
-              ),
+              ],
             ),
     );
   }
+}
 
-  Widget _buildCornerWidget({required bool top, required bool left}) {
-    const length = 24.0;
-    const thickness = 4.0;
-    const radius = Radius.circular(16);
+// Custom overlay shape for the viewfinder hole
+class QrScannerOverlayShape extends ShapeBorder {
+  final Color borderColor;
+  final double borderWidth;
+  final Color overlayColor;
+  final double borderRadius;
+  final double borderLength;
+  final double cutOutSize;
 
-    return Container(
-      width: length,
-      height: length,
-      decoration: BoxDecoration(
-        border: Border(
-          top: top ? const BorderSide(color: Colors.white, width: thickness) : BorderSide.none,
-          bottom: !top ? const BorderSide(color: Colors.white, width: thickness) : BorderSide.none,
-          left: left ? const BorderSide(color: Colors.white, width: thickness) : BorderSide.none,
-          right: !left ? const BorderSide(color: Colors.white, width: thickness) : BorderSide.none,
+  QrScannerOverlayShape({
+    this.borderColor = Colors.white,
+    this.borderWidth = 3.0,
+    this.overlayColor = const Color.fromRGBO(0, 0, 0, 0.7),
+    this.borderRadius = 0,
+    this.borderLength = 40,
+    this.cutOutSize = 250,
+  });
+
+  @override
+  EdgeInsetsGeometry get dimensions => const EdgeInsets.all(10.0);
+
+  @override
+  Path getInnerPath(Rect rect, {TextDirection? textDirection}) {
+    return Path()
+      ..fillType = PathFillType.evenOdd
+      ..addPath(getOuterPath(rect), Offset.zero);
+  }
+
+  @override
+  Path getOuterPath(Rect rect, {TextDirection? textDirection}) {
+    Path _getLeftTopPath(Rect rect) {
+      return Path()
+        ..moveTo(rect.left, rect.bottom)
+        ..lineTo(rect.left, rect.top)
+        ..lineTo(rect.right, rect.top);
+    }
+    return _getLeftTopPath(rect)
+      ..lineTo(
+        rect.right,
+        rect.bottom,
+      )
+      ..lineTo(
+        rect.left,
+        rect.bottom,
+      )
+      ..close();
+  }
+
+  @override
+  void paint(Canvas canvas, Rect rect, {TextDirection? textDirection}) {
+    final width = rect.width;
+    final borderWidthSize = width / 2;
+    final height = rect.height;
+    final borderOffset = borderWidth / 2;
+    final _borderLength = borderLength > cutOutSize / 2 + borderWidthSize ? borderWidthSize / 2 : borderLength;
+    final _cutOutSize = cutOutSize < width ? cutOutSize : width - borderOffset;
+
+    final backgroundPaint = Paint()
+      ..color = overlayColor
+      ..style = PaintingStyle.fill;
+
+    final borderPaint = Paint()
+      ..color = borderColor
+      ..style = PaintingStyle.stroke
+      ..strokeWidth = borderWidth;
+
+    final boxPaint = Paint()
+      ..color = borderColor
+      ..style = PaintingStyle.fill
+      ..blendMode = BlendMode.dstOut;
+
+    final cutOutRect = Rect.fromLTWH(
+      rect.left + width / 2 - _cutOutSize / 2 + borderOffset,
+      rect.top + height / 2 - _cutOutSize / 2 + borderOffset,
+      _cutOutSize - borderOffset * 2,
+      _cutOutSize - borderOffset * 2,
+    );
+
+    canvas
+      ..saveLayer(
+        rect,
+        backgroundPaint,
+      )
+      ..drawRect(
+        rect,
+        backgroundPaint,
+      )
+      ..drawRRect(
+        RRect.fromRectAndRadius(
+          cutOutRect,
+          Radius.circular(borderRadius),
         ),
-        borderRadius: BorderRadius.only(
-          topLeft: top && left ? radius : Radius.zero,
-          topRight: top && !left ? radius : Radius.zero,
-          bottomLeft: !top && left ? radius : Radius.zero,
-          bottomRight: !top && !left ? radius : Radius.zero,
-        ),
+        boxPaint,
+      )
+      ..restore();
+
+    canvas.drawRRect(
+      RRect.fromRectAndRadius(
+        cutOutRect,
+        Radius.circular(borderRadius),
       ),
+      borderPaint,
+    );
+  }
+
+  @override
+  ShapeBorder scale(double t) {
+    return QrScannerOverlayShape(
+      borderColor: borderColor,
+      borderWidth: borderWidth,
+      overlayColor: overlayColor,
     );
   }
 }
